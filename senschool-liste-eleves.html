@@ -5,7 +5,7 @@
 <a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
 <h1>Liste des élèves inscrits</h1><p>École Al Islah - Yeumbeul Nord</p>
 <input id="recherche" placeholder="Nom, matricule ou classe">
-<div class="defile"><table><thead><tr><th>Matricule</th><th>Nom</th><th>Classe</th><th>Cursus</th><th>Régime</th><th></th></tr></thead><tbody id="corps"></tbody></table></div>
+<table><thead><tr><th>Matricule</th><th>Élève</th><th></th></tr></thead><tbody id="corps"></tbody></table>
 <script src="senschool.js"></script>
 <script>
 function afficher(){
@@ -13,7 +13,7 @@ function afficher(){
   lire('insc').forEach(function(e){
     const txt=((e.matricule||'')+' '+e.nom+' '+(e.classeFrancaise||'')).toLowerCase();
     if(!txt.includes(q))return;
-    const tr=ligne(corps,[e.matricule||'-',e.nom,e.classeFrancaise||'-',e.cursus,e.regime]);
+    const tr=ligne(corps,[e.matricule||'-',e.nom+' — '+(e.classeFrancaise||e.cursus)]);
     const td=document.createElement('td'),b=document.createElement('button');
     b.textContent='Archiver';b.className='rouge petit';
     b.addEventListener('click',function(){
