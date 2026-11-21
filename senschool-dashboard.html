@@ -12,11 +12,12 @@
 <a class="btn or" href="senschool-liste-eleves.html">Liste des élèves</a>
 <a class="btn" href="senschool-frais.html">Frais scolaires</a>
 <a class="btn" href="senschool-paiements.html">Enregistrer un paiement</a>
+<a class="btn rouge" href="senschool-retards.html">Retards de paiement</a>
 <a class="btn" href="senschool-recus.html">Imprimer un reçu</a>
 <a class="btn or" href="senschool-annonces.html">Annonces aux parents</a>
 <a class="btn rouge" href="senschool-depenses.html">Enregistrer une dépense</a>
 <button class="gris" onclick="exporterDonnees()">💾 Sauvegarder les données</button>
-<button class="rouge" onclick="toutEffacer()">Tout effacer</button>
+<button class="rouge directeur" style="display:none" onclick="effacerAvecConfirmation()">Tout effacer</button>
 <script src="senschool.js"></script>
 <script>
 const enc=lire('pai').reduce((s,p)=>s+Number(p.montant),0);
@@ -30,10 +31,5 @@ function exporterDonnees(){
   const z=document.createElement('textarea');z.value=t;document.body.appendChild(z);z.select();
   document.execCommand('copy');document.body.removeChild(z);
   alert('✅ Données copiées. Colle-les dans un message WhatsApp ou un mail pour les garder en sécurité.');
-}
-function toutEffacer(){
-  if(prompt('Pour supprimer TOUTES les données (définitif), écris EFFACER :')==='EFFACER'){
-    Object.values(CLES).forEach(k=>localStorage.removeItem(k));location.reload();
-  }
 }
 </script></body></html>
