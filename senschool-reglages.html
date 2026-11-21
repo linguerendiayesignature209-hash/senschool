@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Cachet et signatures</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour" href="senschool-recus.html">⬅️ Retour aux reçus</a>
+<h1>Cachet et signatures</h1>
+<p>Photographie chaque élément sur une feuille blanche, bien éclairé. Le fond blanc est retiré automatiquement.</p>
+<div id="blocs"></div>
+<script src="senschool.js"></script><script src="senschool-outils.js"></script>
+<script>
+const ELEMENTS=[['cachet',"Cachet de l'école"],['sigDirecteur','Signature du directeur'],['sigComptable','Signature du comptable']];
+quandPret(async function(){
+  const rg=await lireReglages();
+  ELEMENTS.forEach(function(e){
+    const d=document.createElement('div');d.className='card';
+    d.innerHTML='<b>'+e[1]+'</b><img id="img_'+e[0]+'" style="max-width:100%;max-height:140px;background:#eee;margin:8px 0;display:block"><input type="file" accept="image/*" id="f_'+e[0]+'">';
+    $('blocs').appendChild(d);
+    if(rg[e[0]])$('img_'+e[0]).src=rg[e[0]];
+    $('f_'+e[0]).onchange=async function(){
+      if(!this.files[0])return;
+      try{
+        const url=await reduireImage(this.files[0],320);
+        const o={};o[e[0]]=url;await ecrireReglages(o);
+        $('img_'+e[0]).src=url;alert('✅ Enregistré.');
+      }catch(err){alert('Erreur : '+err.message)}
+    };
+  });
+});
+</script></body></html>
