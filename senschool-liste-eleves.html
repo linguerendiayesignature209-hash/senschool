@@ -4,22 +4,27 @@
 <body>
 <a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
 <h1>Liste des élèves inscrits</h1><p>École Al Islah - Yeumbeul Nord</p>
-<input id="recherche" placeholder="Rechercher un élève">
-<div class="defile"><table><thead><tr><th>Nom</th><th>Cursus</th><th>Classe</th><th>Régime</th><th></th></tr></thead><tbody id="corps"></tbody></table></div>
+<input id="recherche" placeholder="Nom, matricule ou classe">
+<div class="defile"><table><thead><tr><th>Matricule</th><th>Nom</th><th>Classe</th><th>Cursus</th><th>Régime</th><th></th></tr></thead><tbody id="corps"></tbody></table></div>
 <script src="senschool.js"></script>
 <script>
 function afficher(){
   const q=$('recherche').value.trim().toLowerCase(),corps=$('corps');corps.innerHTML='';
-  lire('insc').forEach(function(e,i){
-    if(!e.nom.toLowerCase().includes(q))return;
-    const tr=ligne(corps,[e.nom,e.cursus,e.classeFrancaise||'-',e.regime]);
+  lire('insc').forEach(function(e){
+    const txt=((e.matricule||'')+' '+e.nom+' '+(e.classeFrancaise||'')).toLowerCase();
+    if(!txt.includes(q))return;
+    const tr=ligne(corps,[e.matricule||'-',e.nom,e.classeFrancaise||'-',e.cursus,e.regime]);
     const td=document.createElement('td'),b=document.createElement('button');
-    b.textContent='Supprimer';b.className='rouge petit';
+    b.textContent='Archiver';b.className='rouge petit';
     b.addEventListener('click',function(){
-      if(confirm('Supprimer cet élève ?')){const l=lire('insc');l.splice(i,1);ecrire('insc',l);afficher()}
+      if(!estDirecteur()){alert('Réservé au directeur.');return}
+      if(!confirm("Archiver cet élève ? Son historique de paiements est conservé."))return;
+      const l=lire('insc'),x=l.find(function(r){return e.id?r.id===e.id:(r.nom===e.nom&&r.anneeScolaire===e.anneeScolaire)});
+      if(x){x.archive=true;x.archivePar=cloud.user.email;x.archiveLe=new Date().toISOString();ecrire('insc',l);afficher()}
     });
     td.appendChild(b);tr.appendChild(td);
   });
 }
-$('recherche').addEventListener('input',afficher);afficher();
+$('recherche').addEventListener('input',afficher);
+afficher();
 </script></body></html>
