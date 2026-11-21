@@ -33,7 +33,7 @@ async function fabriquer(){
 $('choix').addEventListener('change',function(){
   if($('choix').value===''){$('recu').hidden=true;paiement=null;return}
   const i=Number($('choix').value);paiement=l[i];
-  numero='REC-'+String(i+1).padStart(4,'0');
+  numero=paiement.numeroRecu||('REC-'+String(i+1).padStart(4,'0'));
   const msg='*École Al Islah - Reçu '+numero+'*\nÉlève : '+paiement.nomEleve+'\nType : '+paiement.typePaiement+'\nMontant : '+fcfa(paiement.montant)+'\nDate : '+dateFr(paiement.datePaiement)+'\nMerci pour votre confiance.';
   $('wa').href=lienWhatsApp(telParent(paiement.nomEleve,paiement.anneeScolaire),msg);
   $('recu').hidden=false;fabriquer();
