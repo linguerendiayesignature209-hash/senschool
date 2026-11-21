@@ -94,3 +94,30 @@ document.body.appendChild(voile);
     $('zoneConnexion').innerHTML='<p>⚠️ Connexion internet requise.</p><button style="'+STYLE_BTN+'" onclick="location.reload()">Réessayer</button>';
   }
 })();
+/* ===== ÉTAPE 2 : identifiants permanents et archivage ===== */
+function brut(c){try{return JSON.parse(localStorage.getItem(CLES[c]))||[]}catch(e){return[]}}
+function lire(c){return brut(c).filter(function(r){return !r.archive})}
+function nouvelId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function prochainNumero(liste,champ,prefixe){
+  let m=0;
+  liste.forEach(function(r){const n=parseInt(String(r[champ]||'').replace(/\D/g,''),10);if(n>m)m=n});
+  return prefixe+String(m+1).padStart(4,'0');
+}
+function migrerEleves(){if(brut('insc').some(function(r){return !r.matricule}))ecrire('insc',lire('insc'))}
+function ecrire(c,l){
+  if(c==='pai')migrerEleves();
+  const tout=brut(c),quand=new Date().toISOString(),qui=cloud?cloud.user.email:'';
+  l.forEach(function(r){
+    if(!r.id){r.id=nouvelId();r.cree=quand;r.creePar=qui}
+    if(c==='insc'&&!r.matricule)r.matricule=prochainNumero(tout.concat(l),'matricule','AI-');
+    if(c==='pai'){
+      if(!r.numeroRecu)r.numeroRecu=prochainNumero(tout.concat(l),'numeroRecu','REC-');
+      if(!r.matricule){const e=brut('insc').find(function(x){return x.nom===r.nomEleve&&x.anneeScolaire===r.anneeScolaire});if(e)r.matricule=e.matricule}
+    }
+  });
+  const archives=tout.filter(function(r){return r.archive&&!l.some(function(x){return x.id===r.id})});
+  const s=JSON.stringify(l.concat(archives));
+  localStorage.setItem(CLES[c],s);
+  envoyer(c,s).catch(function(e){alert('⚠️ Erreur de sauvegarde en ligne : '+e.message)});
+}
+(function(){const t=setInterval(function(){if(cloud){clearInterval(t);setTimeout(migrerEleves,4000)}},500)})();
