@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Retards</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
+<h1>Retards de paiement</h1>
+<p>Mensualités à payer au plus tard le 5 de chaque mois, d'octobre à septembre.</p>
+<label>Année scolaire</label><select id="annee"></select>
+<div class="card">Total des retards<div id="total" class="nombre">0 FCFA</div></div>
+<div class="defile"><table><thead><tr><th>Élève</th><th>Reste à payer</th><th></th></tr></thead><tbody id="corps"></tbody></table></div>
+<h2>Détail mois par mois</h2>
+<label>Choisir un élève</label><select id="eleve"></select>
+<div class="defile"><table><thead><tr><th>Mois</th><th>Montant</th><th>Statut</th></tr></thead><tbody id="mois"></tbody></table></div>
+<script src="senschool.js"></script>
+<script>
+const DEBUT_MOIS=9; // 9 = octobre (0 = janvier)
+const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+remplir($('annee'),['2026-2027','2027-2028']);
+function tarif(e){return lire('frais').find(x=>x.anneeScolaire===e.anneeScolaire&&x.cursus===e.cursus&&x.regime===e.regime)}
+function somme(nom,annee,type){return lire('pai').filter(p=>p.nomEleve===nom&&p.anneeScolaire===annee&&p.typePaiement===type).reduce((s,p)=>s+p.montant,0)}
+function moisEchus(annee){
+  const a=Number(annee.split('-')[0]),auj=new Date();let n=0;
+  for(let k=0;k<12;k++){if(new Date(a,DEBUT_MOIS+k,5)<=auj)n++}
+  return n;
+}
+function afficher(){
+  const annee=$('annee').value,n=moisEchus(annee),corps=$('corps');
+  corps.innerHTML='';let total=0;
+  const eleves=lire('insc').filter(e=>e.anneeScolaire===annee);
+  $('eleve').innerHTML='';remplir($('eleve'),eleves.map(e=>e.nom));
+  eleves.forEach(function(e){
+    const f=tarif(e);
+    if(!f){ligne(corps,[e.nom,'Tarif non défini','']);return}
+    const du=(f.inscription||0)+n*(f.mensualite||0);
+    const paye=somme(e.nom,annee,'Inscription')+somme(e.nom,annee,'Mensualité');
+    const reste=du-paye;
+    if(reste<=0)return;
+    total+=reste;
+    const tr=ligne(corps,[e.nom,fcfa(reste)]),td=document.createElement('td'),a=document.createElement('a');
+    const msg='Assalamou alaykoum,\n*École Al Islah* : rappel de paiement pour '+e.nom+'.\nMontant dû à ce jour : '+fcfa(du)+'\nDéjà payé : '+fcfa(paye)+'\n*Reste à payer : '+fcfa(reste)+'*\nLes mensualités sont à régler au plus tard le 5 de chaque mois. Merci pour votre compréhension.';
+    a.textContent='Relancer';a.className='btn petit';a.target='_blank';a.href=lienWhatsApp(e.telParent,msg);
+    td.appendChild(a);tr.appendChild(td);
+  });
+  $('total').textContent=fcfa(total);
+  detail();
+}
+function detail(){
+  const annee=$('annee').value,nom=$('eleve').value,corps=$('mois');
+  corps.innerHTML='';
+  const e=lire('insc').find(x=>x.nom===nom&&x.anneeScolaire===annee);
+  if(!e)return;
+  const f=tarif(e);
+  if(!f){ligne(corps,['Tarif non défini','','']);return}
+  const pi=somme(nom,annee,'Inscription'),fi=f.inscription||0;
+  ligne(corps,['Inscription',fcfa(fi),pi>=fi?'✅ Payé':pi>0?'🟠 Partiel':'🔴 Non payé']);
+  let reste=somme(nom,annee,'Mensualité');
+  const a=Number(annee.split('-')[0]),auj=new Date(),m=f.mensualite||0;
+  for(let k=0;k<12;k++){
+    const d=new Date(a,DEBUT_MOIS+k,5);let s;
+    if(reste>=m){s='✅ Payé';reste-=m}
+    else if(reste>0){s='🟠 Partiel ('+fcfa(reste)+')';reste=0}
+    else s=d<=auj?'🔴 En retard':'⏳ À venir';
+    ligne(corps,[MOIS[d.getMonth()]+' '+d.getFullYear(),fcfa(m),s]);
+  }
+}
+$('annee').addEventListener('change',afficher);
+$('eleve').addEventListener('change',detail);
+afficher();
+</script></body></html>
