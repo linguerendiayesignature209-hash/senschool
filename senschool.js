@@ -12,6 +12,13 @@ const FIREBASE_CONFIG={apiKey:"AIzaSyBAUADiLK3dWfI3IZJQc1YmSY0Yug-hwiE",authDoma
 const STYLE_CHAMP='width:100%;padding:12px;margin:6px 0;border:1px solid #bbb;border-radius:8px;box-sizing:border-box;font-size:1em';
 const STYLE_BTN='width:100%;padding:14px;margin-top:8px;border:none;border-radius:8px;background:#14532d;color:#fff;font-weight:bold;font-size:1em;cursor:pointer';
 let cloud=null;
+const DIRECTEUR='francoarabealislah@gmail.com';
+function estDirecteur(){return !!cloud&&cloud.user.email.toLowerCase()===DIRECTEUR}
+function appliquerRoles(){document.querySelectorAll('.directeur').forEach(function(e){e.style.display=estDirecteur()?'':'none'})}
+function effacerAvecConfirmation(){
+  if(!estDirecteur()){alert('Réservé au directeur.');return}
+  if(prompt('Pour supprimer TOUTES les données (définitif), écris EFFACER :')==='EFFACER')effacerTout();
+}
 
 function envoyer(c,s){
   if(!cloud)return Promise.reject(new Error('Pas de connexion à la base de données.'));
@@ -80,6 +87,7 @@ document.body.appendChild(voile);
       cloud={db:db,fs:FS,user:user};
       voile.style.display='none';
       boutonDeconnexion();
+      appliquerRoles();
       if(!demarre){demarre=true;synchroniser()}
     });
   }catch(e){
