@@ -4,31 +4,47 @@
 <body>
 <a class="retour noprint" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
 <div class="noprint"><h1>Reçus de paiement</h1>
-<label>Choisir un paiement</label><select id="choix"><option value="">Choisir un paiement</option></select></div>
+<label>Choisir un paiement</label><select id="choix"><option value="">Choisir un paiement</option></select>
+<label>Signé par</label><select id="signataire"><option value="directeur">Directeur</option><option value="comptable">Comptable</option></select></div>
 <div id="recu" class="card" hidden>
-<h2 style="text-align:center;color:#14532d">École Al Islah - Yeumbeul Nord</h2>
-<h3 style="text-align:center">REÇU DE PAIEMENT</h3>
-<p id="num"></p><p id="eleve"></p><p id="annee"></p><p id="type"></p><p id="montant"></p><p id="date"></p>
-<p><strong>Signature du responsable :</strong></p><p>................................................</p>
-<button class="noprint" onclick="window.print()">Imprimer le reçu</button>
-<a id="wa" class="btn or noprint" target="_blank">Envoyer par WhatsApp</a>
+<p id="apercu" class="noprint" style="text-align:center"></p>
+<img id="image" style="width:100%;border:1px solid #ccc">
+<button class="noprint" id="btnPartager">📤 Envoyer l'image (WhatsApp)</button>
+<button class="noprint gris" id="btnTelecharger">⬇️ Télécharger l'image</button>
+<button class="noprint" onclick="window.print()">🖨️ Imprimer</button>
+<a id="wa" class="btn or noprint" target="_blank">Envoyer le texte par WhatsApp</a>
 </div>
-<script src="senschool.js"></script>
+<a class="retour noprint" href="senschool-reglages.html">⚙️ Configurer cachet et signatures</a>
+<script src="senschool.js"></script><script src="senschool-outils.js"></script>
 <script>
+let blob=null,numero='',paiement=null;
 const l=lire('pai');
 l.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p.nomEleve+' - '+p.typePaiement+' - '+fcfa(p.montant);$('choix').appendChild(o)});
+function pret(){return new Promise(r=>quandPret(r))}
+async function fabriquer(){
+  if(!paiement)return;
+  $('apercu').textContent="Préparation de l'image…";
+  await pret();
+  const rg=await lireReglages();
+  $('apercu').textContent=rg.cachet?'':'⚠️ Cachet non configuré (lien en bas de page).';
+  blob=await genererRecu(paiement,numero,$('signataire').value,rg);
+  $('image').src=URL.createObjectURL(blob);
+}
 $('choix').addEventListener('change',function(){
-  if($('choix').value===''){$('recu').hidden=true;return}
-  const i=Number($('choix').value),p=l[i];
-  const numero='REC-'+String(i+1).padStart(4,'0');
-  $('num').textContent='Numéro du reçu : '+numero;
-  $('eleve').textContent="Nom de l'élève : "+p.nomEleve;
-  $('annee').textContent='Année scolaire : '+p.anneeScolaire;
-  $('type').textContent='Type de paiement : '+p.typePaiement;
-  $('montant').textContent='Montant payé : '+fcfa(p.montant);
-  $('date').textContent='Date du paiement : '+dateFr(p.datePaiement);
-  const msg='*École Al Islah - Reçu '+numero+'*\nÉlève : '+p.nomEleve+'\nType : '+p.typePaiement+'\nMontant : '+fcfa(p.montant)+'\nDate : '+dateFr(p.datePaiement)+'\nMerci pour votre confiance.';
-  $('wa').href=lienWhatsApp(telParent(p.nomEleve,p.anneeScolaire),msg);
-  $('recu').hidden=false;
+  if($('choix').value===''){$('recu').hidden=true;paiement=null;return}
+  const i=Number($('choix').value);paiement=l[i];
+  numero='REC-'+String(i+1).padStart(4,'0');
+  const msg='*École Al Islah - Reçu '+numero+'*\nÉlève : '+paiement.nomEleve+'\nType : '+paiement.typePaiement+'\nMontant : '+fcfa(paiement.montant)+'\nDate : '+dateFr(paiement.datePaiement)+'\nMerci pour votre confiance.';
+  $('wa').href=lienWhatsApp(telParent(paiement.nomEleve,paiement.anneeScolaire),msg);
+  $('recu').hidden=false;fabriquer();
 });
+$('signataire').addEventListener('change',fabriquer);
+$('btnPartager').onclick=async function(){
+  if(!blob)return;
+  const f=new File([blob],numero+'.png',{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share({files:[f],text:'Reçu '+numero+' - École Al Islah'})}catch(e){}
+  }else{alert("Partage indisponible ici. Utilise « Télécharger l'image », puis envoie-la par WhatsApp.")}
+};
+$('btnTelecharger').onclick=function(){if(!blob)return;const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=numero+'.png';a.click()};
 </script></body></html>
