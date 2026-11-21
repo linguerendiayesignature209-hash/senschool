@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Tableau de bord</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<h1>SenSchool - Al Islah</h1>
+<p>Tableau de bord de l'année 2026-2027</p>
+<div class="card">Élèves inscrits<div id="nb" class="nombre">0</div></div>
+<div class="card">Total encaissé<div id="enc" class="nombre">0 FCFA</div></div>
+<div class="card">Total des dépenses<div id="dep" class="nombre">0 FCFA</div></div>
+<div class="card">Solde en caisse (net)<div id="solde" class="nombre">0 FCFA</div></div>
+<a class="btn" href="senschool-inscriptions.html">Nouvelle inscription</a>
+<a class="btn or" href="senschool-liste-eleves.html">Liste des élèves</a>
+<a class="btn" href="senschool-frais.html">Frais scolaires</a>
+<a class="btn" href="senschool-paiements.html">Enregistrer un paiement</a>
+<a class="btn" href="senschool-recus.html">Imprimer un reçu</a>
+<a class="btn or" href="senschool-annonces.html">Annonces aux parents</a>
+<a class="btn rouge" href="senschool-depenses.html">Enregistrer une dépense</a>
+<button class="gris" onclick="exporterDonnees()">💾 Sauvegarder les données</button>
+<button class="rouge" onclick="toutEffacer()">Tout effacer</button>
+<script src="senschool.js"></script>
+<script>
+const enc=lire('pai').reduce((s,p)=>s+Number(p.montant),0);
+const dep=lire('dep').reduce((s,d)=>s+Number(d.montant),0);
+$('nb').textContent=lire('insc').length;
+$('enc').textContent=fcfa(enc);
+$('dep').textContent=fcfa(dep);
+$('solde').textContent=fcfa(enc-dep);
+function exporterDonnees(){
+  const t=JSON.stringify({inscriptions:lire('insc'),frais:lire('frais'),paiements:lire('pai'),depenses:lire('dep')});
+  const z=document.createElement('textarea');z.value=t;document.body.appendChild(z);z.select();
+  document.execCommand('copy');document.body.removeChild(z);
+  alert('✅ Données copiées. Colle-les dans un message WhatsApp ou un mail pour les garder en sécurité.');
+}
+function toutEffacer(){
+  if(prompt('Pour supprimer TOUTES les données (définitif), écris EFFACER :')==='EFFACER'){
+    Object.values(CLES).forEach(k=>localStorage.removeItem(k));location.reload();
+  }
+}
+</script></body></html>

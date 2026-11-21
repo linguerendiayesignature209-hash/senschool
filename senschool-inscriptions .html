@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Inscriptions</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
+<h1>Inscriptions</h1><p>École Al Islah - Yeumbeul Nord</p>
+<form id="f">
+<label>Nom de l'élève</label><input id="nom" required>
+<label>Téléphone WhatsApp du parent</label><input id="tel" type="tel" placeholder="Ex : 77 123 45 67">
+<label>Année scolaire</label><select id="annee" required><option value="">Choisir une année</option></select>
+<label>Cursus pédagogique</label><select id="cursus" required><option value="">Choisir un cursus</option></select>
+<label>Classe française</label><select id="classe"><option value="">Choisir une classe</option></select>
+<label>Niveau arabe</label><select id="niveau" required><option value="">Choisir un niveau</option></select>
+<label>Régime scolaire</label><select id="regime" required><option value="">Choisir un régime</option></select>
+<button type="submit">Inscrire l'élève</button>
+</form>
+<p id="compteur"></p>
+<a class="btn or" href="senschool-liste-eleves.html">Voir la liste des élèves</a>
+<script src="senschool.js"></script>
+<script>
+remplir($('annee'),['2026-2027','2027-2028']);
+remplir($('cursus'),['Franco-arabe','Arabe uniquement']);
+remplir($('classe'),['Préscolaire','CI','CP','CE1','CE2','CM1','CM2']);
+remplir($('niveau'),['Niveau 1','Niveau 2','Niveau 3','Niveau 4','Niveau 5']);
+remplir($('regime'),['Standard','Semi-internat','Internat']);
+function majClasse(){const fa=$('cursus').value==='Franco-arabe';$('classe').disabled=!fa;$('classe').required=fa;if(!fa)$('classe').value=''}
+function compter(){$('compteur').textContent='Total des inscriptions : '+lire('insc').length}
+$('cursus').addEventListener('change',majClasse);majClasse();compter();
+$('f').addEventListener('submit',function(e){
+  e.preventDefault();
+  const l=lire('insc'),nom=$('nom').value.trim(),annee=$('annee').value;
+  if(l.some(i=>i.nom.toLowerCase()===nom.toLowerCase()&&i.anneeScolaire===annee)){alert('Cet élève est déjà inscrit pour cette année.');return}
+  l.push({nom:nom,telParent:$('tel').value.trim(),anneeScolaire:annee,cursus:$('cursus').value,classeFrancaise:$('classe').value,niveauArabe:$('niveau').value,regime:$('regime').value});
+  ecrire('insc',l);$('f').reset();majClasse();compter();alert('✅ Élève inscrit.');
+});
+</script></body></html>

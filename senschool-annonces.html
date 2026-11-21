@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Annonces</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
+<h1>Annonces aux parents</h1><p>École Al Islah - Yeumbeul Nord</p>
+<div class="card">
+<label>Type</label><select id="type"></select>
+<label>Message</label><textarea id="texte" rows="5" style="width:100%;padding:12px;box-sizing:border-box;border:1px solid #bbb;border-radius:8px;font-size:1em" placeholder="Ex : Réunion des parents samedi à 10h à l'école."></textarea>
+<a id="groupe" class="btn gris" target="_blank">Envoyer dans un groupe ou un contact</a>
+</div>
+<p>Ou un parent à la fois :</p>
+<div class="defile"><table><thead><tr><th>Élève</th><th>Parent</th></tr></thead><tbody id="corps"></tbody></table></div>
+<script src="senschool.js"></script>
+<script>
+remplir($('type'),['Information','Événement','Réunion','Rappel']);
+function message(){return '*École Al Islah - '+$('type').value+'*\n\n'+($('texte').value.trim()||'...')}
+function afficher(){
+  $('groupe').href=lienWhatsApp('',message());
+  const corps=$('corps');corps.innerHTML='';
+  lire('insc').forEach(function(e){
+    const tr=ligne(corps,[e.nom]),td=document.createElement('td');
+    if(e.telParent){const a=document.createElement('a');a.textContent='WhatsApp';a.className='btn petit';a.target='_blank';a.href=lienWhatsApp(e.telParent,message());td.appendChild(a)}
+    else td.textContent='Pas de numéro';
+    tr.appendChild(td);
+  });
+}
+$('type').addEventListener('change',afficher);$('texte').addEventListener('input',afficher);afficher();
+</script></body></html>

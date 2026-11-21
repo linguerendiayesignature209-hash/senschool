@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Frais scolaires</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
+<h1>Frais scolaires</h1><p>École Al Islah - Yeumbeul Nord</p>
+<form id="f">
+<label>Année scolaire</label><select id="annee" required><option value="">Choisir une année</option></select>
+<label>Cursus pédagogique</label><select id="cursus" required><option value="">Choisir un cursus</option></select>
+<label>Régime scolaire</label><select id="regime" required><option value="">Choisir un régime</option></select>
+<label>Montant des frais (FCFA)</label><input id="montant" type="number" min="0" required>
+<button type="submit">Enregistrer les frais</button>
+</form>
+<div class="defile"><table><thead><tr><th>Année</th><th>Cursus</th><th>Régime</th><th>Montant</th></tr></thead><tbody id="corps"></tbody></table></div>
+<script src="senschool.js"></script>
+<script>
+remplir($('annee'),['2026-2027','2027-2028']);
+remplir($('cursus'),['Franco-arabe','Arabe uniquement']);
+remplir($('regime'),['Standard','Semi-internat','Internat']);
+function afficher(){$('corps').innerHTML='';lire('frais').forEach(f=>ligne($('corps'),[f.anneeScolaire,f.cursus,f.regime,fcfa(f.montant)]))}
+afficher();
+$('f').addEventListener('submit',function(e){
+  e.preventDefault();
+  const l=lire('frais'),f={anneeScolaire:$('annee').value,cursus:$('cursus').value,regime:$('regime').value,montant:Number($('montant').value)};
+  if(l.some(x=>x.anneeScolaire===f.anneeScolaire&&x.cursus===f.cursus&&x.regime===f.regime)){alert('Ce tarif existe déjà.');return}
+  l.push(f);ecrire('frais',l);$('f').reset();afficher();
+});
+</script></body></html>

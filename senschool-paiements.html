@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Paiements</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
+<h1>Paiements scolaires</h1><p>École Al Islah - Yeumbeul Nord</p>
+<form id="f">
+<label>Élève (inscrit)</label><select id="eleve" required><option value="">Choisir un élève</option></select>
+<label>Année scolaire</label><select id="annee" required><option value="">Choisir une année</option></select>
+<label>Type de paiement</label><select id="type" required><option value="">Choisir un type</option></select>
+<label>Montant payé (FCFA)</label><input id="montant" type="number" min="1" required>
+<label>Date du paiement</label><input id="date" type="date" required>
+<button type="submit">Enregistrer le paiement</button>
+</form>
+<p id="total"></p>
+<div class="defile"><table><thead><tr><th>Date</th><th>Élève</th><th>Type</th><th>Montant</th></tr></thead><tbody id="corps"></tbody></table></div>
+<script src="senschool.js"></script>
+<script>
+remplir($('eleve'),[...new Set(lire('insc').map(i=>i.nom))]);
+remplir($('annee'),['2026-2027','2027-2028']);
+remplir($('type'),['Inscription','Mensualité','Autres frais']);
+$('date').value=new Date().toISOString().slice(0,10);
+function afficher(){
+  const l=lire('pai');$('corps').innerHTML='';
+  l.forEach(p=>ligne($('corps'),[dateFr(p.datePaiement),p.nomEleve,p.typePaiement,fcfa(p.montant)]));
+  $('total').textContent='Total : '+l.length+' paiements - '+fcfa(l.reduce((s,p)=>s+p.montant,0));
+}
+afficher();
+$('f').addEventListener('submit',function(e){
+  e.preventDefault();
+  const l=lire('pai');
+  l.push({nomEleve:$('eleve').value,anneeScolaire:$('annee').value,typePaiement:$('type').value,montant:Number($('montant').value),datePaiement:$('date').value});
+  ecrire('pai',l);$('montant').value='';afficher();alert('✅ Paiement enregistré.');
+});
+</script></body></html>

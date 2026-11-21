@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Dépenses</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
+<h1>Dépenses</h1><p>École Al Islah - Yeumbeul Nord</p>
+<div class="card">Total des dépenses<div id="total" class="nombre">0 FCFA</div></div>
+<form id="f">
+<label>Motif</label><input id="motif" placeholder="Ex : achat craies, facture SDE" required>
+<label>Montant (FCFA)</label><input id="montant" type="number" min="1" required>
+<label>Date</label><input id="date" type="date" required>
+<button class="rouge" type="submit">Enregistrer la dépense</button>
+</form>
+<div class="defile"><table><thead><tr><th>Date</th><th>Motif</th><th>Montant</th></tr></thead><tbody id="corps"></tbody></table></div>
+<script src="senschool.js"></script>
+<script>
+$('date').value=new Date().toISOString().slice(0,10);
+function afficher(){
+  const l=lire('dep');$('corps').innerHTML='';
+  l.forEach(d=>ligne($('corps'),[dateFr(d.date),d.motif,fcfa(d.montant)]));
+  $('total').textContent=fcfa(l.reduce((s,d)=>s+Number(d.montant),0));
+}
+afficher();
+$('f').addEventListener('submit',function(e){
+  e.preventDefault();
+  const l=lire('dep');
+  l.push({motif:$('motif').value.trim(),montant:Number($('montant').value),date:$('date').value});
+  ecrire('dep',l);$('motif').value='';$('montant').value='';afficher();
+});
+</script></body></html>

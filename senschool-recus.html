@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Reçus</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour noprint" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
+<div class="noprint"><h1>Reçus de paiement</h1>
+<label>Choisir un paiement</label><select id="choix"><option value="">Choisir un paiement</option></select></div>
+<div id="recu" class="card" hidden>
+<h2 style="text-align:center;color:#14532d">École Al Islah - Yeumbeul Nord</h2>
+<h3 style="text-align:center">REÇU DE PAIEMENT</h3>
+<p id="num"></p><p id="eleve"></p><p id="annee"></p><p id="type"></p><p id="montant"></p><p id="date"></p>
+<p><strong>Signature du responsable :</strong></p><p>................................................</p>
+<button class="noprint" onclick="window.print()">Imprimer le reçu</button>
+<a id="wa" class="btn or noprint" target="_blank">Envoyer par WhatsApp</a>
+</div>
+<script src="senschool.js"></script>
+<script>
+const l=lire('pai');
+l.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p.nomEleve+' - '+p.typePaiement+' - '+fcfa(p.montant);$('choix').appendChild(o)});
+$('choix').addEventListener('change',function(){
+  if($('choix').value===''){$('recu').hidden=true;return}
+  const i=Number($('choix').value),p=l[i];
+  const numero='REC-'+String(i+1).padStart(4,'0');
+  $('num').textContent='Numéro du reçu : '+numero;
+  $('eleve').textContent="Nom de l'élève : "+p.nomEleve;
+  $('annee').textContent='Année scolaire : '+p.anneeScolaire;
+  $('type').textContent='Type de paiement : '+p.typePaiement;
+  $('montant').textContent='Montant payé : '+fcfa(p.montant);
+  $('date').textContent='Date du paiement : '+dateFr(p.datePaiement);
+  const msg='*École Al Islah - Reçu '+numero+'*\nÉlève : '+p.nomEleve+'\nType : '+p.typePaiement+'\nMontant : '+fcfa(p.montant)+'\nDate : '+dateFr(p.datePaiement)+'\nMerci pour votre confiance.';
+  $('wa').href=lienWhatsApp(telParent(p.nomEleve,p.anneeScolaire),msg);
+  $('recu').hidden=false;
+});
+</script></body></html>
