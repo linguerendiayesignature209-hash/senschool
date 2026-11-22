@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Sauvegarde</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
+<h1>Sauvegarde</h1>
+<div class="card"><p id="derniere"></p>
+<button id="btnExport">⬇️ Télécharger la sauvegarde</button>
+<a class="btn or" href="senschool-rapport.html">📄 Rapport financier (PDF)</a></div>
+<div class="card directeur" style="display:none"><b>Restaurer une sauvegarde</b>
+<p>Remplace TOUTES les données actuelles par celles du fichier choisi. Une copie de l'état actuel est téléchargée d'abord.</p>
+<input type="file" id="fichier" accept=".json,application/json"></div>
+<script src="senschool.js"></script>
+<script>
+function contenu(){const d={};Object.keys(CLES).forEach(function(c){d[c]=brut(c)});return{application:'SenSchool',date:new Date().toISOString(),donnees:d}}
+function telecharger(){
+  const b=new Blob([JSON.stringify(contenu())],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download='senschool-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  localStorage.setItem('ss_derniere_sauvegarde',new Date().toISOString());montrer();
+}
+function montrer(){
+  const d=localStorage.getItem('ss_derniere_sauvegarde');
+  $('derniere').textContent=d?'Dernière sauvegarde sur ce téléphone : '+dateFr(d.slice(0,10)):'⚠️ Aucune sauvegarde faite sur ce téléphone.';
+}
+$('btnExport').onclick=telecharger;montrer();
+$('fichier').onchange=function(){
+  const f=this.files[0];if(!f)return;
+  if(!estDirecteur()){alert('Réservé au directeur.');return}
+  const r=new FileReader();
+  r.onload=function(){
+    let o;try{o=JSON.parse(r.result)}catch(e){alert('Fichier invalide.');return}
+    if(!o||o.application!=='SenSchool'||!o.donnees){alert("Ce fichier n'est pas une sauvegarde SenSchool.");return}
+    const n=Object.keys(CLES).map(function(c){return (o.donnees[c]||[]).length}).join(' / ');
+    if(!confirm('Restaurer la sauvegarde du '+dateFr(o.date.slice(0,10))+' ? Contenu : '+n+' (élèves / tarifs / paiements / dépenses). Les données actuelles seront remplacées.'))return;
+    telecharger();
+    Promise.all(Object.keys(CLES).map(function(c){const s=JSON.stringify(o.donnees[c]||[]);localStorage.setItem(CLES[c],s);return envoyer(c,s)}))
+      .then(function(){alert('✅ Sauvegarde restaurée.');location.href='senschool-dashboard.html'})
+      .catch(function(e){alert('Erreur : '+e.message)});
+  };
+  r.readAsText(f);
+};
+</script></body></html>
