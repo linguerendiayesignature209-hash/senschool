@@ -189,3 +189,18 @@ function lienWhatsApp(tel,msg){
   let n=String(tel||'').replace(/\D/g,'');if(n.length===9)n='221'+n;
   return 'https://wa.me/'+n+'?text='+encodeURIComponent(msg);
            }
+/* ===== SAUVEGARDE : liens sur le tableau de bord ===== */
+Object.assign(AR,{'📦 Sauvegarde et restauration':'📦 النسخ الاحتياطي والاستعادة','📄 Rapport financier':'📄 التقرير المالي','⚠️ Pense à faire une sauvegarde (aucune depuis plus de 7 jours).':'⚠️ تذكير: قم بنسخة احتياطية (لم تتم منذ أكثر من 7 أيام).'});
+function initSauvegarde(){
+  if(!$('solde'))return;
+  const ancre=document.querySelector('button[onclick="exporterDonnees()"]');
+  [['senschool-sauvegarde.html','📦 Sauvegarde et restauration'],['senschool-rapport.html','📄 Rapport financier']].forEach(function(x){
+    const a=document.createElement('a');a.className='btn gris';a.href=x[0];a.textContent=x[1];ancre.parentNode.insertBefore(a,ancre)});
+  const d=localStorage.getItem('ss_derniere_sauvegarde');
+  if(!d||Date.now()-new Date(d).getTime()>7*86400000){
+    const m=document.createElement('div');m.className='card';m.style.cssText='border:2px solid #b8860b';
+    m.textContent='⚠️ Pense à faire une sauvegarde (aucune depuis plus de 7 jours).';
+    document.querySelector('h1').after(m);
+  }
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initSauvegarde);else initSauvegarde();
