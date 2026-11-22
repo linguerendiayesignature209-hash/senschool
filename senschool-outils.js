@@ -25,17 +25,26 @@ async function genererRecu(p,numero,signataire,rg){
   x.fillStyle='#fff';x.fillRect(0,0,W,H);
   x.strokeStyle='#14532d';x.lineWidth=8;x.strokeRect(20,20,W-40,H-40);
   x.textAlign='center';x.fillStyle='#14532d';
-  x.font='bold 36px Arial';x.fillText('École Al Islah - Yeumbeul Nord',W/2,100);
-  x.fillStyle='#222';x.font='bold 30px Arial';x.fillText('REÇU DE PAIEMENT',W/2,160);
-  x.font='28px Arial';x.fillText('وصل دفع',W/2,205);
-  x.textAlign='left';x.font='26px Arial';
-  const l=[['N° du reçu',numero],['Élève',p.nomEleve],['Année scolaire',p.anneeScolaire],['Type',p.typePaiement],['Montant',fcfa(p.montant)],['Date',dateFr(p.datePaiement)]];
-  l.forEach(function(r,i){const y=290+i*80;x.fillStyle='#666';x.font='26px Arial';x.fillText(r[0],70,y);x.fillStyle='#000';x.font='bold 28px Arial';x.fillText(String(r[1]),330,y)});
+  x.font='bold 36px Arial';x.fillText('École Al Islah - Yeumbeul Nord',W/2,90);
+  x.font='28px Arial';x.fillText('مدرسة الإصلاح الفرنسية العربية',W/2,135);
+  x.fillStyle='#222';x.font='bold 30px Arial';x.fillText('REÇU DE PAIEMENT',W/2,190);
+  x.font='28px Arial';x.fillText('وصل دفع',W/2,230);
+  const T={'Inscription':'التسجيل','Mensualité':'القسط الشهري','Autres frais':'رسوم أخرى'};
+  const l=[['N° du reçu','رقم الوصل',numero,''],['Élève','التلميذ',p.nomEleve,''],['Année scolaire','السنة الدراسية',p.anneeScolaire,''],['Type','النوع',p.typePaiement,T[p.typePaiement]||''],['Montant','المبلغ',fcfa(p.montant),''],['Date','التاريخ',dateFr(p.datePaiement),'']];
+  x.textAlign='left';
+  l.forEach(function(r,i){
+    const y=300+i*68;
+    x.fillStyle='#666';x.font='24px Arial';x.fillText(r[0],70,y);
+    x.font='20px Arial';x.fillText(r[1],70,y+26);
+    x.fillStyle='#000';x.font='bold 27px Arial';x.fillText(String(r[2]),330,y);
+    if(r[3]){x.fillStyle='#444';x.font='22px Arial';x.fillText(r[3],330,y+26)}
+  });
   const cachet=await chargerImage(rg.cachet),sig=await chargerImage(signataire==='comptable'?rg.sigComptable:rg.sigDirecteur);
   function poser(img,bx,by,bw,bh){if(!img)return;const s=Math.min(bw/img.width,bh/img.height);x.drawImage(img,bx+(bw-img.width*s)/2,by+(bh-img.height*s)/2,img.width*s,img.height*s)}
   poser(cachet,70,720,280,170);poser(sig,450,720,280,170);
+  const sg=signataire==='comptable';
   x.fillStyle='#666';x.font='22px Arial';x.textAlign='center';
-  x.fillText("Cachet de l'école",210,925);
-  x.fillText('Signature : '+(signataire==='comptable'?'Comptable':'Directeur'),590,925);
+  x.fillText("Cachet de l'école",210,925);x.fillText('ختم المدرسة',210,955);
+  x.fillText('Signature : '+(sg?'Comptable':'Directeur'),590,925);x.fillText('التوقيع : '+(sg?'المحاسب':'المدير'),590,955);
   return new Promise(function(ok){c.toBlob(ok,'image/png')});
-    }
+}
