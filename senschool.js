@@ -168,3 +168,24 @@ function initLangue(){
   new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(traduireNoeud);if(m.type==='characterData')traduireNoeud(m.target)})}).observe(document.body,{childList:true,subtree:true,characterData:true});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initLangue);else initLangue();
+/* ===== MESSAGES WHATSAPP BILINGUES ===== */
+function versArabe(msg){
+  const T={'Inscription':'التسجيل','Mensualité':'القسط الشهري','Autres frais':'رسوم أخرى'};
+  if(msg.indexOf('*École Al Islah - Reçu ')===0){
+    const g=function(k){const r=msg.match(new RegExp('\\n'+k+' : (.*)'));return r?r[1]:''};
+    const num=(msg.match(/Reçu ([^*]+)\*/)||[])[1]||'';
+    return '*مدرسة الإصلاح - وصل '+num+'*\nالتلميذ : '+g('Élève')+'\nالنوع : '+(T[g('Type')]||g('Type'))+'\nالمبلغ : '+g('Montant')+'\nالتاريخ : '+g('Date')+'\nشكرا لثقتكم.';
+  }
+  if(msg.indexOf('rappel de paiement pour ')>-1){
+    const nom=(msg.match(/rappel de paiement pour (.*)\./)||[])[1]||'';
+    const g=function(k){const r=msg.match(new RegExp(k+' : (.*)'));return r?r[1].replace(/\*/g,''):''};
+    return 'السلام عليكم ورحمة الله،\n*مدرسة الإصلاح* : تذكير بالدفع للتلميذ '+nom+'.\nالمبلغ المستحق إلى اليوم : '+g('Montant dû à ce jour')+'\nالمدفوع : '+g('Déjà payé')+'\n*المتبقي للدفع : '+g('Reste à payer')+'*\nيُرجى تسديد القسط الشهري في أجل أقصاه الخامس من كل شهر. شكرا لتفهمكم.';
+  }
+  return '';
+}
+function lienWhatsApp(tel,msg){
+  const ar=versArabe(msg);
+  if(ar)msg=msg+'\n\n──────────\n\n'+ar;
+  let n=String(tel||'').replace(/\D/g,'');if(n.length===9)n='221'+n;
+  return 'https://wa.me/'+n+'?text='+encodeURIComponent(msg);
+           }
