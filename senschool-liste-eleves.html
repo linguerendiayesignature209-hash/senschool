@@ -3,28 +3,48 @@
 <title>SenSchool - Liste des élèves</title><link rel="stylesheet" href="senschool.css"></head>
 <body>
 <a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
-<h1>Liste des élèves inscrits</h1><p>École Al Islah - Yeumbeul Nord</p>
+<h1 id="titre">Liste des élèves inscrits</h1><p>École Al Islah - Yeumbeul Nord</p>
 <input id="recherche" placeholder="Nom, matricule ou classe">
+<button id="btnArch" class="gris">🗄️ Voir les élèves archivés</button>
 <table><thead><tr><th>Matricule</th><th>Élève</th><th></th></tr></thead><tbody id="corps"></tbody></table>
 <script src="senschool.js"></script>
 <script>
+let archives=false;
 function afficher(){
   const q=$('recherche').value.trim().toLowerCase(),corps=$('corps');corps.innerHTML='';
-  lire('insc').forEach(function(e){
+  const source=archives?brut('insc').filter(function(r){return r.archive}):lire('insc');
+  if(!source.length){ligne(corps,['','Aucun élève','']);}
+  source.forEach(function(e){
     const txt=((e.matricule||'')+' '+e.nom+' '+(e.classeFrancaise||'')).toLowerCase();
     if(!txt.includes(q))return;
     const tr=ligne(corps,[e.matricule||'-',e.nom+' — '+(e.classeFrancaise||e.cursus)]);
     const td=document.createElement('td'),b=document.createElement('button');
-    b.textContent='Archiver';b.className='rouge petit';
-    b.addEventListener('click',function(){
-      if(!estDirecteur()){alert('Réservé au directeur.');return}
-      if(!confirm("Archiver cet élève ? Son historique de paiements est conservé."))return;
-      const l=lire('insc'),x=l.find(function(r){return e.id?r.id===e.id:(r.nom===e.nom&&r.anneeScolaire===e.anneeScolaire)});
-      if(x){x.archive=true;x.archivePar=cloud.user.email;x.archiveLe=new Date().toISOString();ecrire('insc',l);afficher()}
-    });
+    b.className='petit';
+    if(archives){
+      b.textContent='Restaurer';
+      b.addEventListener('click',function(){
+        if(!estDirecteur()){alert('Réservé au directeur.');return}
+        const l=brut('insc'),x=l.find(function(r){return r.id===e.id});
+        if(x){delete x.archive;ecrire('insc',l);afficher()}
+      });
+    }else{
+      b.textContent='Archiver';b.className='rouge petit';
+      b.addEventListener('click',function(){
+        if(!estDirecteur()){alert('Réservé au directeur.');return}
+        if(!confirm("Archiver cet élève ? Son historique de paiements est conservé."))return;
+        const l=lire('insc'),x=l.find(function(r){return e.id?r.id===e.id:(r.nom===e.nom&&r.anneeScolaire===e.anneeScolaire)});
+        if(x){x.archive=true;x.archivePar=cloud.user.email;x.archiveLe=new Date().toISOString();ecrire('insc',l);afficher()}
+      });
+    }
     td.appendChild(b);tr.appendChild(td);
   });
 }
+$('btnArch').addEventListener('click',function(){
+  archives=!archives;
+  $('titre').textContent=archives?'Élèves archivés':'Liste des élèves inscrits';
+  $('btnArch').textContent=archives?'⬅️ Revenir à la liste':'🗄️ Voir les élèves archivés';
+  afficher();
+});
 $('recherche').addEventListener('input',afficher);
 afficher();
 </script></body></html>
