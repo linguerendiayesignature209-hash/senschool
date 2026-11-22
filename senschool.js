@@ -121,3 +121,50 @@ function ecrire(c,l){
   envoyer(c,s).catch(function(e){alert('⚠️ Erreur de sauvegarde en ligne : '+e.message)});
 }
 (function(){const t=setInterval(function(){if(cloud){clearInterval(t);setTimeout(migrerEleves,4000)}},500)})();
+/* ===== FRANÇAIS / ARABE ===== */
+const AR={
+"Tableau de bord de l'année 2026-2027":"لوحة القيادة للسنة الدراسية 2026-2027",
+"Élèves inscrits":"التلاميذ المسجلون","Total encaissé":"إجمالي المبالغ المحصّلة","Total des dépenses":"إجمالي المصاريف","Solde en caisse (net)":"الرصيد الصافي في الصندوق",
+"Nouvelle inscription":"تسجيل جديد","Liste des élèves":"قائمة التلاميذ","Frais scolaires":"الرسوم الدراسية","Enregistrer un paiement":"تسجيل دفعة",
+"Retards de paiement":"المتأخرات","Imprimer un reçu":"طباعة وصل","Annonces aux parents":"إعلانات للأولياء","Enregistrer une dépense":"تسجيل مصروف",
+"💾 Sauvegarder les données":"💾 حفظ البيانات","Tout effacer":"مسح الكل","Déconnexion":"تسجيل الخروج","⬅️ Retour au tableau de bord":"⬅️ العودة إلى لوحة القيادة",
+"Adresse e-mail":"البريد الإلكتروني","Mot de passe":"كلمة المرور","Se connecter":"تسجيل الدخول",
+"Inscriptions":"التسجيلات","Nom de l'élève":"اسم التلميذ","Téléphone WhatsApp du parent":"هاتف واتساب الولي","Année scolaire":"السنة الدراسية",
+"Cursus pédagogique":"المسار التعليمي","Classe française":"القسم الفرنسي","Niveau arabe":"المستوى العربي","Régime scolaire":"النظام الدراسي",
+"Inscrire l'élève":"تسجيل التلميذ","Voir la liste des élèves":"عرض قائمة التلاميذ",
+"Choisir une année":"اختر السنة","Choisir un cursus":"اختر المسار","Choisir une classe":"اختر القسم","Choisir un niveau":"اختر المستوى","Choisir un régime":"اختر النظام",
+"Franco-arabe":"فرنسي-عربي","Arabe uniquement":"عربي فقط","Standard":"عادي","Semi-internat":"نصف داخلي","Internat":"داخلي","Préscolaire":"التحضيري",
+"Liste des élèves inscrits":"قائمة التلاميذ المسجلين","Matricule":"رقم التسجيل","Élève":"التلميذ","Nom, matricule ou classe":"الاسم أو رقم التسجيل أو القسم",
+"Archiver":"أرشفة","Restaurer":"استرجاع","🗄️ Voir les élèves archivés":"🗄️ عرض التلاميذ المؤرشفين","⬅️ Revenir à la liste":"⬅️ الرجوع إلى القائمة",
+"Élèves archivés":"التلاميذ المؤرشفون","Aucun élève":"لا يوجد تلاميذ",
+"Frais d'inscription (une fois par an, FCFA)":"رسوم التسجيل (مرة في السنة، فرنك)","Mensualité (par mois, FCFA)":"القسط الشهري (بالفرنك)","Enregistrer les frais":"حفظ الرسوم",
+"Année":"السنة","Cursus":"المسار","Régime":"النظام","Inscription":"التسجيل","Mensualité":"القسط الشهري","Autres frais":"رسوم أخرى","Supprimer":"حذف",
+"Paiements scolaires":"المدفوعات المدرسية","Élève (inscrit)":"التلميذ (المسجل)","Choisir un élève":"اختر التلميذ","Type de paiement":"نوع الدفع","Choisir un type":"اختر النوع",
+"Montant payé (FCFA)":"المبلغ المدفوع (فرنك)","Date du paiement":"تاريخ الدفع","Enregistrer le paiement":"تسجيل الدفعة","Date":"التاريخ","Type":"النوع","Montant":"المبلغ",
+"Dépenses":"المصاريف","Motif":"السبب","Montant (FCFA)":"المبلغ (فرنك)","Enregistrer la dépense":"تسجيل المصروف",
+"Reçus de paiement":"وصولات الدفع","Choisir un paiement":"اختر دفعة","Signé par":"موقّع من طرف","Directeur":"المدير","Comptable":"المحاسب",
+"📤 Envoyer l'image (WhatsApp)":"📤 إرسال الصورة (واتساب)","⬇️ Télécharger l'image":"⬇️ تحميل الصورة","🖨️ Imprimer":"🖨️ طباعة",
+"Envoyer le texte par WhatsApp":"إرسال النص عبر واتساب","⚙️ Configurer cachet et signatures":"⚙️ إعداد الختم والتوقيعات",
+"Total des retards":"إجمالي المتأخرات","Reste à payer":"المتبقي للدفع","Relancer":"تذكير","Détail mois par mois":"التفصيل شهرا بشهر","Mois":"الشهر","Statut":"الحالة",
+"Message":"الرسالة","Information":"معلومة","Événement":"حدث","Réunion":"اجتماع","Rappel":"تذكير",
+"Envoyer dans un groupe ou un contact":"إرسال إلى مجموعة أو جهة اتصال","Ou un parent à la fois :":"أو ولي واحدا تلو الآخر:","Parent":"الولي","Pas de numéro":"لا يوجد رقم"
+};
+function langue(){return localStorage.getItem('ss_lang')==='ar'?'ar':'fr'}
+function changerLangue(){localStorage.setItem('ss_lang',langue()==='ar'?'fr':'ar');location.reload()}
+function traduireNoeud(n){
+  if(n.nodeType===3){const k=n.nodeValue.trim();if(AR[k])n.nodeValue=n.nodeValue.replace(k,AR[k]);return}
+  if(n.nodeType!==1||n.tagName==='SCRIPT'||n.tagName==='STYLE')return;
+  if(n.placeholder&&AR[n.placeholder])n.placeholder=AR[n.placeholder];
+  n.childNodes.forEach(traduireNoeud);
+}
+function initLangue(){
+  const b=document.createElement('button');b.id='btnLangue';b.className='noprint';
+  b.textContent=langue()==='ar'?'Français':'العربية';
+  b.style.cssText='position:fixed;left:8px;bottom:8px;width:auto;padding:8px 12px;margin:0;font-size:.85em;background:#b8860b;color:#fff;border:none;border-radius:8px;z-index:9000';
+  b.onclick=changerLangue;document.body.appendChild(b);
+  if(langue()!=='ar')return;
+  document.documentElement.dir='rtl';document.documentElement.lang='ar';
+  traduireNoeud(document.body);
+  new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(traduireNoeud);if(m.type==='characterData')traduireNoeud(m.target)})}).observe(document.body,{childList:true,subtree:true,characterData:true});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initLangue);else initLangue();
