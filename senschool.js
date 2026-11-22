@@ -204,3 +204,79 @@ function initSauvegarde(){
   }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initSauvegarde);else initSauvegarde();
+/* ===== ARABE : sauvegarde, rapport et messages ===== */
+Object.assign(AR,{
+"Sauvegarde":"النسخ الاحتياطي",
+"⬇️ Télécharger la sauvegarde":"⬇️ تحميل النسخة الاحتياطية",
+"📄 Rapport financier (PDF)":"📄 التقرير المالي (PDF)",
+"Restaurer une sauvegarde":"استعادة نسخة احتياطية",
+"Remplace TOUTES les données actuelles par celles du fichier choisi. Une copie de l'état actuel est téléchargée d'abord.":"يستبدل كل البيانات الحالية ببيانات الملف المختار. يتم تحميل نسخة من الحالة الحالية أولا.",
+"⚠️ Aucune sauvegarde faite sur ce téléphone.":"⚠️ لم تتم أي نسخة احتياطية على هذا الهاتف.",
+"⬅️ Retour":"⬅️ رجوع",
+"🖨️ Imprimer / Enregistrer en PDF":"🖨️ طباعة / حفظ بصيغة PDF",
+"Dans la fenêtre d'impression, choisis « Enregistrer au format PDF ».":"في نافذة الطباعة، اختر «حفظ بصيغة PDF».",
+"École Al Islah - Yeumbeul Nord":"مدرسة الإصلاح الفرنسية العربية",
+"Dû":"المستحق","Payé":"المدفوع","Reste":"المتبقي",
+"Frais attendus (année complète)":"الرسوم المنتظرة (السنة كاملة)",
+"Encaissé : inscriptions":"المحصّل : التسجيلات",
+"Encaissé : mensualités":"المحصّل : الأقساط الشهرية",
+"Encaissé : autres frais":"المحصّل : رسوم أخرى",
+"Reste à encaisser (frais scolaires)":"المتبقي للتحصيل (الرسوم الدراسية)",
+"Dépenses de l'année":"مصاريف السنة",
+"Solde de caisse (encaissé − dépenses)":"رصيد الصندوق (المحصّل − المصاريف)"
+});
+const FRAG={
+"Dernière sauvegarde sur ce téléphone : ":"آخر نسخة احتياطية على هذا الهاتف : ",
+"Rapport financier ":"التقرير المالي ",
+" — édité le ":" — حُرّر بتاريخ ",
+"élève(s) sans tarif défini : leur dû n'est pas compté.":"تلميذ بدون تعريفة محددة: مستحقاتهم غير محسوبة."
+};
+function traduireNoeud(n){
+  if(n.nodeType===3){
+    const k=n.nodeValue.trim();
+    if(AR[k]){n.nodeValue=n.nodeValue.replace(k,AR[k]);return}
+    let v=n.nodeValue,ch=false;
+    Object.keys(FRAG).forEach(function(f){if(v.indexOf(f)>-1){v=v.split(f).join(FRAG[f]);ch=true}});
+    if(ch)n.nodeValue=v;
+    return;
+  }
+  if(n.nodeType!==1||n.tagName==='SCRIPT'||n.tagName==='STYLE')return;
+  if(n.placeholder&&AR[n.placeholder])n.placeholder=AR[n.placeholder];
+  n.childNodes.forEach(traduireNoeud);
+}
+const MSG={
+"Réservé au directeur.":"خاص بالمدير.",
+"Fichier invalide.":"ملف غير صالح.",
+"Ce fichier n'est pas une sauvegarde SenSchool.":"هذا الملف ليس نسخة احتياطية لـ SenSchool.",
+"✅ Sauvegarde restaurée.":"✅ تمت استعادة النسخة الاحتياطية.",
+"✅ Paiement enregistré.":"✅ تم تسجيل الدفعة.",
+"✅ Tarif enregistré.":"✅ تم حفظ التعريفة.",
+"✅ Élève inscrit.":"✅ تم تسجيل التلميذ.",
+"Choisis un élève.":"اختر تلميذا.",
+"Cet élève est déjà inscrit pour cette année.":"هذا التلميذ مسجل بالفعل لهذه السنة.",
+"Supprimer ce tarif ?":"حذف هذه التعريفة؟",
+"Un tarif existe déjà pour cette combinaison. Le remplacer ?":"توجد تعريفة لهذه الحالة. هل تريد استبدالها؟",
+"Archiver cet élève ? Son historique de paiements est conservé.":"أرشفة هذا التلميذ؟ سجل مدفوعاته محفوظ.",
+"Pour supprimer TOUTES les données (définitif), écris EFFACER :":"لحذف كل البيانات نهائيا، اكتب EFFACER :"
+};
+const MSGFRAG={
+"Restaurer la sauvegarde du ":"استعادة النسخة الاحتياطية بتاريخ ",
+" ? Contenu : ":" ؟ المحتوى : ",
+"(élèves / tarifs / paiements / dépenses). Les données actuelles seront remplacées.":"(تلاميذ / تعريفات / مدفوعات / مصاريف). سيتم استبدال البيانات الحالية.",
+"Ce montant dépasse le reste à payer de l'année (":"هذا المبلغ يتجاوز المتبقي للسنة (",
+"). Continuer ?":"). هل تريد المتابعة؟",
+"⚠️ Erreur de sauvegarde en ligne : ":"⚠️ خطأ في الحفظ على الإنترنت : ",
+"Erreur : ":"خطأ : "
+};
+function trMsg(s){
+  if(MSG[s])return MSG[s];
+  Object.keys(MSGFRAG).forEach(function(f){s=s.split(f).join(MSGFRAG[f])});
+  return s;
+}
+(function(){
+  if(langue()!=='ar')return;
+  const a=window.alert,c=window.confirm,p=window.prompt;
+  window.alert=function(m){return a.call(window,trMsg(String(m)))};
+  window.confirm=function(m){return c.call(window,trMsg(String(m)))};
+  window.prompt=function(m,d){return p.call(window,trMsg(String(m)),d)};
+})();
