@@ -8,21 +8,51 @@
 <label>Année scolaire</label><select id="annee" required><option value="">Choisir une année</option></select>
 <label>Cursus pédagogique</label><select id="cursus" required><option value="">Choisir un cursus</option></select>
 <label>Régime scolaire</label><select id="regime" required><option value="">Choisir un régime</option></select>
-<label>Montant des frais (FCFA)</label><input id="montant" type="number" min="0" required>
+<label>Frais d'inscription (une fois par an, FCFA)</label><input id="inscription" type="number" min="0" required>
+<label>Mensualité (par mois, FCFA)</label><input id="mensualite" type="number" min="0" required>
 <button type="submit">Enregistrer les frais</button>
 </form>
-<div class="defile"><table><thead><tr><th>Année</th><th>Cursus</th><th>Régime</th><th>Montant</th></tr></thead><tbody id="corps"></tbody></table></div>
+<div id="liste"></div>
 <script src="senschool.js"></script>
 <script>
 remplir($('annee'),['2026-2027','2027-2028']);
 remplir($('cursus'),['Franco-arabe','Arabe uniquement']);
 remplir($('regime'),['Standard','Semi-internat','Internat']);
-function afficher(){$('corps').innerHTML='';lire('frais').forEach(f=>ligne($('corps'),[f.anneeScolaire,f.cursus,f.regime,fcfa(f.montant)]))}
+function memeTarif(a,b){return a.anneeScolaire===b.anneeScolaire&&a.cursus===b.cursus&&a.regime===b.regime}
+function afficher(){
+  const z=$('liste');z.innerHTML='';
+  lire('frais').forEach(function(f){
+    const d=document.createElement('div');d.className='card';
+    const t=document.createElement('b');t.textContent=f.anneeScolaire+' — '+f.cursus+' — '+f.regime;d.appendChild(t);
+    const ins=f.inscription||0,men=f.mensualite||0;
+    const m=document.createElement('div');m.style.margin='8px 0';
+    m.textContent='Inscription : '+fcfa(ins)+' — Mensualité : '+fcfa(men)+((!ins&&!men)?' ⚠️ à compléter':'');
+    if(!ins&&!men)m.style.color='#b91c1c';
+    d.appendChild(m);
+    const bm=document.createElement('button');bm.textContent='Modifier';bm.className='petit gris';bm.style.marginRight='8px';
+    bm.onclick=function(){
+      $('annee').value=f.anneeScolaire;$('cursus').value=f.cursus;$('regime').value=f.regime;
+      $('inscription').value=ins||'';$('mensualite').value=men||'';window.scrollTo(0,0);
+    };
+    const bs=document.createElement('button');bs.textContent='Supprimer';bs.className='petit rouge';
+    bs.onclick=function(){
+      if(!confirm('Supprimer ce tarif ?'))return;
+      const l=lire('frais').filter(function(r){return !memeTarif(r,f)});
+      ecrire('frais',l);afficher();
+    };
+    d.appendChild(bm);d.appendChild(bs);z.appendChild(d);
+  });
+}
 afficher();
 $('f').addEventListener('submit',function(e){
   e.preventDefault();
-  const l=lire('frais'),f={anneeScolaire:$('annee').value,cursus:$('cursus').value,regime:$('regime').value,montant:Number($('montant').value)};
-  if(l.some(x=>x.anneeScolaire===f.anneeScolaire&&x.cursus===f.cursus&&x.regime===f.regime)){alert('Ce tarif existe déjà.');return}
-  l.push(f);ecrire('frais',l);$('f').reset();afficher();
+  const l=lire('frais');
+  const f={anneeScolaire:$('annee').value,cursus:$('cursus').value,regime:$('regime').value,inscription:Number($('inscription').value),mensualite:Number($('mensualite').value)};
+  const x=l.find(function(r){return memeTarif(r,f)});
+  if(x){
+    if(!confirm('Un tarif existe déjà pour cette combinaison. Le remplacer ?'))return;
+    x.inscription=f.inscription;x.mensualite=f.mensualite;delete x.montant;
+  }else l.push(f);
+  ecrire('frais',l);$('f').reset();afficher();alert('✅ Tarif enregistré.');
 });
 </script></body></html>
