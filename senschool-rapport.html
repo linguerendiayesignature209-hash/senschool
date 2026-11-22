@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Rapport financier</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour noprint" href="senschool-sauvegarde.html">⬅️ Retour</a>
+<div class="noprint"><label>Année scolaire</label><select id="annee"></select>
+<button id="imp">🖨️ Imprimer / Enregistrer en PDF</button>
+<p>Dans la fenêtre d'impression, choisis « Enregistrer au format PDF ».</p></div>
+<h2 style="text-align:center;color:#14532d">École Al Islah - Yeumbeul Nord</h2>
+<h3 id="titre" style="text-align:center"></h3>
+<div id="resume" class="card"></div>
+<table><thead><tr><th>Matricule</th><th>Élève</th><th>Dû</th><th>Payé</th><th>Reste</th></tr></thead><tbody id="corps"></tbody></table>
+<script src="senschool.js"></script>
+<script>
+remplir($('annee'),['2026-2027','2027-2028']);
+function rapport(){
+  const annee=$('annee').value,a=Number(annee.split('-')[0]);
+  const eleves=lire('insc').filter(function(e){return e.anneeScolaire===annee});
+  const pais=lire('pai').filter(function(p){return p.anneeScolaire===annee});
+  const deps=lire('dep').filter(function(d){return d.date>=a+'-10-01'&&d.date<(a+1)+'-10-01'});
+  const somme=function(l,f){return l.reduce(function(s,x){return s+Number(f(x))},0)};
+  const parType=function(t){return somme(pais.filter(function(p){return p.typePaiement===t}),function(p){return p.montant})};
+  const enc=somme(pais,function(p){return p.montant}),dep=somme(deps,function(d){return d.montant});
+  let attendu=0,reste=0,sansTarif=0;
+  const corps=$('corps');corps.innerHTML='';
+  eleves.forEach(function(e){
+    const f=lire('frais').find(function(x){return x.anneeScolaire===annee&&x.cursus===e.cursus&&x.regime===e.regime});
+    const paye=somme(pais.filter(function(p){return (p.matricule?p.matricule===e.matricule:p.nomEleve===e.nom)&&p.typePaiement!=='Autres frais'}),function(p){return p.montant});
+    if(!f){sansTarif++;ligne(corps,[e.matricule||'-',e.nom,'?',fcfa(paye),'?']);return}
+    const du=(f.inscription||0)+12*(f.mensualite||0);attendu+=du;reste+=Math.max(du-paye,0);
+    ligne(corps,[e.matricule||'-',e.nom,fcfa(du),fcfa(paye),fcfa(Math.max(du-paye,0))]);
+  });
+  $('titre').textContent='Rapport financier '+annee+' — édité le '+dateFr(new Date().toISOString().slice(0,10));
+  const r=$('resume');r.innerHTML='';
+  [['Élèves inscrits',eleves.length],['Frais attendus (année complète)',fcfa(attendu)],['Encaissé : inscriptions',fcfa(parType('Inscription'))],['Encaissé : mensualités',fcfa(parType('Mensualité'))],['Encaissé : autres frais',fcfa(parType('Autres frais'))],['Total encaissé',fcfa(enc)],['Reste à encaisser (frais scolaires)',fcfa(reste)],["Dépenses de l'année",fcfa(dep)],['Solde de caisse (encaissé − dépenses)',fcfa(enc-dep)]].forEach(function(x){
+    const d=document.createElement('div');d.style.cssText='display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #eee';
+    const s1=document.createElement('span'),s2=document.createElement('b');s1.textContent=x[0];s2.textContent=x[1];d.appendChild(s1);d.appendChild(s2);r.appendChild(d);
+  });
+  if(sansTarif){const d=document.createElement('div');d.style.color='#b91c1c';d.textContent='⚠️ '+sansTarif+" élève(s) sans tarif défini : leur dû n'est pas compté.";r.appendChild(d)}
+}
+$('annee').addEventListener('change',rapport);$('imp').onclick=function(){window.print()};rapport();
+</script></body></html>
