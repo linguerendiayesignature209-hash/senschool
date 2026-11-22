@@ -6,15 +6,41 @@
 <h1>Annonces aux parents</h1><p>École Al Islah - Yeumbeul Nord</p>
 <div class="card">
 <label>Type</label><select id="type"></select>
-<label>Message</label><textarea id="texte" rows="5" style="width:100%;padding:12px;box-sizing:border-box;border:1px solid #bbb;border-radius:8px;font-size:1em" placeholder="Ex : Réunion des parents samedi à 10h à l'école."></textarea>
-<a id="groupe" class="btn gris" target="_blank">Envoyer dans un groupe ou un contact</a>
+<label>Message en français</label><textarea id="texteFr" rows="4" style="width:100%;padding:12px;box-sizing:border-box;border:1px solid #bbb;border-radius:8px;font-size:1em"></textarea>
+<label>الرسالة بالعربية</label><textarea id="texteAr" rows="4" dir="rtl" style="width:100%;padding:12px;box-sizing:border-box;border:1px solid #bbb;border-radius:8px;font-size:1em"></textarea>
+<button type="button" id="modele" class="gris">📋 Modèle : suivi à la maison et fournitures</button>
+<a id="groupe" class="btn" target="_blank">Envoyer dans un groupe ou un contact</a>
 </div>
 <p>Ou un parent à la fois :</p>
 <div class="defile"><table><thead><tr><th>Élève</th><th>Parent</th></tr></thead><tbody id="corps"></tbody></table></div>
 <script src="senschool.js"></script>
 <script>
 remplir($('type'),['Information','Événement','Réunion','Rappel']);
-function message(){return '*École Al Islah - '+$('type').value+'*\n\n'+($('texte').value.trim()||'...')}
+const TYPES={'Information':'معلومة','Événement':'حدث','Réunion':'اجتماع','Rappel':'تذكير'};
+const MODELE_FR=`Assalamou alaykoum wa rahmatullah,
+Chers parents,
+L'école franco-arabe Al Islah vous remercie de votre confiance. La réussite de nos élèves est une œuvre commune entre l'école et la famille. Nous vous invitons à :
+• suivre le travail de votre enfant à la maison (leçons, devoirs, cahiers) ;
+• veiller à son assiduité et à sa ponctualité ;
+• lui acheter ses fournitures scolaires dès que possible.
+Qu'Allah bénisse nos enfants et facilite leur réussite.
+La Direction`;
+const MODELE_AR=`السلام عليكم ورحمة الله وبركاته
+أولياء الأمور الكرام،
+تشكركم مدرسة الإصلاح الفرنسية العربية على ثقتكم. إن نجاح أبنائنا مسؤولية مشتركة بين المدرسة والأسرة. ندعوكم إلى:
+• متابعة أبنائكم في البيت (الدروس والواجبات والكراسات)؛
+• الحرص على انتظامهم في الحضور والتزامهم بالمواعيد؛
+• توفير أدواتهم المدرسية في أقرب وقت.
+بارك الله في أبنائنا ويسّر لهم النجاح.
+الإدارة`;
+function message(){
+  const fr=$('texteFr').value.trim(),ar=$('texteAr').value.trim();
+  let m='';
+  if(fr)m+='*École Al Islah - '+$('type').value+'*\n\n'+fr;
+  if(fr&&ar)m+='\n\n──────────\n\n';
+  if(ar)m+='*مدرسة الإصلاح - '+TYPES[$('type').value]+'*\n\n'+ar;
+  return m||'...';
+}
 function afficher(){
   $('groupe').href=lienWhatsApp('',message());
   const corps=$('corps');corps.innerHTML='';
@@ -25,5 +51,7 @@ function afficher(){
     tr.appendChild(td);
   });
 }
-$('type').addEventListener('change',afficher);$('texte').addEventListener('input',afficher);afficher();
+['type','texteFr','texteAr'].forEach(function(id){$(id).addEventListener('input',afficher);$(id).addEventListener('change',afficher)});
+$('modele').onclick=function(){$('texteFr').value=MODELE_FR;$('texteAr').value=MODELE_AR;afficher()};
+afficher();
 </script></body></html>
