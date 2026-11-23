@@ -9,6 +9,11 @@
 <label>Élève (inscrit)</label><select id="eleve" required><option value="">Choisir un élève</option></select>
 <div id="recap" class="card" hidden style="background:#f7f5ec;margin:10px 0"></div>
 <label>Type de paiement</label><select id="type" required><option value="">Choisir un type</option></select>
+<div id="aide" style="display:none;margin:8px 0">
+<div id="blocMois"><label>Nombre de mois</label><input id="nbmois" type="number" min="1" max="12" placeholder="Ex : 3"></div>
+<button type="button" id="b1" class="petit gris" style="margin-right:6px"></button>
+<button type="button" id="b2" class="petit gris"></button>
+</div>
 <label>Montant payé (FCFA)</label><input id="montant" type="number" min="1" required>
 <label>Date du paiement</label><input id="date" type="date" required>
 <button type="submit">Enregistrer le paiement</button>
@@ -19,20 +24,20 @@
 <script>
 const DEBUT_MOIS=9;
 const AR_=langue()==='ar';
-const T=AR_?{tarif:'التعريفة',ins:'التسجيل',men:'القسط الشهري',du:'المستحق إلى حد اليوم',paye:'المدفوع إلى الآن',rj:'المتبقي إلى حد اليوم',ra:'المتبقي للسنة كاملة',ok:'الحساب مسدد ✅',aucun:'⚠️ لا توجد تعريفة لهذا التلميذ',m:'أقساط'}
-:{tarif:'Tarif',ins:'inscription',men:'mensualité',du:'Dû à ce jour',paye:'Déjà payé',rj:'Reste à payer à ce jour',ra:'Reste pour toute l\'année',ok:'À jour ✅',aucun:'⚠️ Aucun tarif défini pour cet élève',m:'mensualités'};
+const T=AR_?{tarif:'التعريفة',ins:'التسجيل',men:'القسط الشهري',du:'المستحق إلى حد اليوم',paye:'المدفوع إلى الآن',rj:'المتبقي إلى حد اليوم',ra:'المتبقي للسنة كاملة',ok:'الحساب مسدد ✅',aucun:'⚠️ لا توجد تعريفة لهذا التلميذ',m:'أقساط',pm:'الأشهر المسددة',cas:'حالة اجتماعية',gr:'مجاني',rd:'تخفيض شهري'}
+:{tarif:'Tarif',ins:'inscription',men:'mensualité',du:'Dû à ce jour',paye:'Déjà payé',rj:'Reste à payer à ce jour',ra:'Reste pour toute l\'année',ok:'À jour ✅',aucun:'⚠️ Aucun tarif défini pour cet élève',m:'mensualités',pm:'Mois payés',cas:'Cas social',gr:'Gratuit',rd:'Réduction par mois'};
 remplir($('annee'),['2026-2027','2027-2028']);
 remplir($('type'),['Inscription','Mensualité','Autres frais']);
 $('date').value=new Date().toISOString().slice(0,10);
 function moisEchus(annee){const a=Number(annee.split('-')[0]),auj=new Date();let n=0;for(let k=0;k<12;k++){if(new Date(a,DEBUT_MOIS+k,5)<=auj)n++}return n}
-function tarifDe(e){return lire('frais').find(function(x){return x.anneeScolaire===e.anneeScolaire&&x.cursus===e.cursus&&x.regime===e.regime})}
-function payeDe(e){return lire('pai').filter(function(p){return (p.matricule?p.matricule===e.matricule:p.nomEleve===e.nom)&&p.anneeScolaire===e.anneeScolaire&&p.typePaiement!=='Autres frais'}).reduce(function(s,p){return s+p.montant},0)}
+function payeType(e,t){return lire('pai').filter(function(p){return (p.matricule?p.matricule===e.matricule:p.nomEleve===e.nom)&&p.anneeScolaire===e.anneeScolaire&&p.typePaiement===t}).reduce(function(s,p){return s+p.montant},0)}
+function payeDe(e){return payeType(e,'Inscription')+payeType(e,'Mensualité')}
 function eleveChoisi(){return lire('insc').find(function(e){return (e.matricule||e.nom)===$('eleve').value&&e.anneeScolaire===$('annee').value})}
 function remplirEleves(){
   $('eleve').length=1;
   lire('insc').filter(function(e){return e.anneeScolaire===$('annee').value}).forEach(function(e){
     const o=document.createElement('option');o.value=e.matricule||e.nom;o.textContent=(e.matricule?e.matricule+' — ':'')+e.nom;$('eleve').appendChild(o)});
-  recap();
+  recap();aide();
 }
 function recap(){
   const e=eleveChoisi(),z=$('recap');
@@ -40,15 +45,40 @@ function recap(){
   if(!e){z.hidden=true;return}
   z.hidden=false;
   function ligneTexte(t,c,g){const d=document.createElement('div');d.textContent=t;if(c)d.style.color=c;if(g)d.style.fontWeight='bold';d.style.margin='4px 0';z.appendChild(d)}
-  const f=tarifDe(e);
+  const f=tarifPour(e);
   if(!f){ligneTexte(T.aucun,'#b91c1c',true);return}
-  const n=moisEchus(e.anneeScolaire),m=f.mensualite||0,ins=f.inscription||0,pay=payeDe(e);
+  const n=moisEchus(e.anneeScolaire),m=f.mensualite,ins=f.inscription,pay=payeDe(e);
   const rj=ins+n*m-pay,ra=ins+12*m-pay;
   ligneTexte(T.tarif+' : '+T.ins+' '+fcfa(ins)+' — '+T.men+' '+fcfa(m));
+  if(f.statut==='Gratuit')ligneTexte(T.cas+' : '+T.gr,'#b8860b',true);
+  else if(f.statut==='Réduction')ligneTexte(T.cas+' : '+T.rd+' '+fcfa(f.reduction),'#b8860b',true);
   ligneTexte(T.du+' ('+n+' '+T.m+') : '+fcfa(ins+n*m));
   ligneTexte(T.paye+' : '+fcfa(pay));
+  if(m>0)ligneTexte(T.pm+' : '+Math.min(Math.floor(payeType(e,'Mensualité')/m),12)+' / 12');
   ligneTexte(rj>0?T.rj+' : '+fcfa(rj):T.ok,rj>0?'#b91c1c':'#14532d',true);
   ligneTexte(T.ra+' : '+fcfa(Math.max(ra,0)));
+}
+function aide(){
+  const e=eleveChoisi(),f=e?tarifPour(e):null,t=$('type').value;
+  const ok=f&&(t==='Mensualité'||t==='Inscription');
+  $('aide').style.display=ok?'block':'none';
+  if(!ok)return;
+  const mens=t==='Mensualité';
+  $('blocMois').style.display=mens?'block':'none';
+  $('b2').style.display=mens?'inline-block':'none';
+  $('b1').textContent=mens?'Payer le reste à ce jour':"Payer le reste de l'inscription";
+  $('b2').textContent="Payer le reste de l'année";
+}
+function remplirMontant(mode){
+  const e=eleveChoisi(),f=e?tarifPour(e):null;if(!f)return;
+  const t=$('type').value;let v=0;
+  if(t==='Inscription')v=f.inscription-payeType(e,'Inscription');
+  else{
+    const pm=payeType(e,'Mensualité');
+    v=(mode==='annee'?12:moisEchus(e.anneeScolaire))*f.mensualite-pm;
+  }
+  if(v<=0){alert("Rien à payer : c'est déjà réglé.");return}
+  $('montant').value=v;$('nbmois').value='';
 }
 function afficher(){
   const l=lire('pai');$('corps').innerHTML='';
@@ -56,18 +86,25 @@ function afficher(){
   $('total').textContent=l.length+' - '+fcfa(l.reduce(function(s,p){return s+p.montant},0));
 }
 $('annee').addEventListener('change',remplirEleves);
-$('eleve').addEventListener('change',recap);
+$('eleve').addEventListener('change',function(){recap();aide()});
+$('type').addEventListener('change',function(){$('nbmois').value='';aide()});
+$('nbmois').addEventListener('input',function(){
+  const e=eleveChoisi(),f=e?tarifPour(e):null,n=Number($('nbmois').value);
+  if(f&&n>0)$('montant').value=n*f.mensualite;
+});
+$('b1').onclick=function(){remplirMontant('jour')};
+$('b2').onclick=function(){remplirMontant('annee')};
 afficher();
 $('f').addEventListener('submit',function(ev){
   ev.preventDefault();
   const e=eleveChoisi();if(!e){alert('Choisis un élève.');return}
-  const montant=Number($('montant').value),type=$('type').value,f=tarifDe(e);
+  const montant=Number($('montant').value),type=$('type').value,f=tarifPour(e);
   if(f&&type!=='Autres frais'){
-    const ra=(f.inscription||0)+12*(f.mensualite||0)-payeDe(e);
+    const ra=f.inscription+12*f.mensualite-payeDe(e);
     if(montant>ra&&!confirm("Ce montant dépasse le reste à payer de l'année ("+fcfa(Math.max(ra,0))+"). Continuer ?"))return;
   }
   const l=lire('pai');
   l.push({nomEleve:e.nom,matricule:e.matricule||'',anneeScolaire:e.anneeScolaire,typePaiement:type,montant:montant,datePaiement:$('date').value});
-  ecrire('pai',l);$('montant').value='';afficher();recap();alert('✅ Paiement enregistré.');
+  ecrire('pai',l);$('montant').value='';$('nbmois').value='';afficher();recap();aide();alert('✅ Paiement enregistré.');
 });
 </script></body></html>
