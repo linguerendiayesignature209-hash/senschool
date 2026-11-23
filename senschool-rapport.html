@@ -24,7 +24,7 @@ function rapport(){
   let attendu=0,reste=0,sansTarif=0;
   const corps=$('corps');corps.innerHTML='';
   eleves.forEach(function(e){
-    const f=lire('frais').find(function(x){return x.anneeScolaire===annee&&x.cursus===e.cursus&&x.regime===e.regime});
+    const f=tarifPour(e);
     const paye=somme(pais.filter(function(p){return (p.matricule?p.matricule===e.matricule:p.nomEleve===e.nom)&&p.typePaiement!=='Autres frais'}),function(p){return p.montant});
     if(!f){sansTarif++;ligne(corps,[e.matricule||'-',e.nom,'?',fcfa(paye),'?']);return}
     const du=(f.inscription||0)+12*(f.mensualite||0);attendu+=du;reste+=Math.max(du-paye,0);
