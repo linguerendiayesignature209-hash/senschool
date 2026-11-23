@@ -302,3 +302,28 @@ function effacerAvecConfirmation(){
   if(r.trim().toUpperCase()!=='EFFACER'){alert("Mot incorrect : rien n'a été effacé.");return}
   effacerTout();
 }
+/* ===== EFFACER EN UN CLIC, DÉCONNEXION AUTO, LIEN CORRECTIONS ===== */
+function effacerAvecConfirmation(){
+  if(!estDirecteur()){alert('Réservé au directeur.');return}
+  if(!confirm('⚠️ Effacer TOUTES les données pour tout le monde ? Une sauvegarde sera téléchargée juste avant.'))return;
+  const d={};Object.keys(CLES).forEach(function(c){d[c]=brut(c)});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({application:'SenSchool',date:new Date().toISOString(),donnees:d})],{type:'application/json'}));
+  a.download='senschool-avant-effacement-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  setTimeout(effacerTout,1500);
+}
+(function(){
+  let t;
+  function armer(){clearTimeout(t);t=setTimeout(function(){const b=$('btnDeco');if(b)b.click()},15*60*1000)}
+  ['click','touchstart','keydown','scroll'].forEach(function(e){document.addEventListener(e,armer,{passive:true})});
+  armer();
+})();
+Object.assign(AR,{'✏️ Corrections et fiches':'✏️ التصحيحات والملفات'});
+function initCorrections(){
+  if(!$('solde'))return;
+  const ancre=document.querySelector('button[onclick="exporterDonnees()"]');
+  if(!ancre)return;
+  const a=document.createElement('a');a.className='btn gris';a.href='senschool-corrections.html';a.textContent='✏️ Corrections et fiches';
+  ancre.parentNode.insertBefore(a,ancre);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initCorrections);else initCorrections();
