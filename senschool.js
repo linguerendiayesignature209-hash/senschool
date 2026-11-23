@@ -280,3 +280,10 @@ function trMsg(s){
   window.confirm=function(m){return c.call(window,trMsg(String(m)))};
   window.prompt=function(m,d){return p.call(window,trMsg(String(m)),d)};
 })();
+/* ===== APPLICATION INSTALLABLE ===== */
+(function(){
+  const h=document.head;
+  [['manifest','manifest.json'],['apple-touch-icon','icon-192.png']].forEach(function(x){const l=document.createElement('link');l.rel=x[0];l.href=x[1];h.appendChild(l)});
+  const m=document.createElement('meta');m.name='theme-color';m.content='#14532d';h.appendChild(m);
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+})();
