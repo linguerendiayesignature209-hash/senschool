@@ -5,7 +5,7 @@
 <a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
 <h1>Tarifs 2026-2027</h1>
 <p style="font-size:.9em">Directeur seul peut modifier. Comptable peut voir.</p>
-<div id="zone" hidden>
+<p id="etat" style="color:#b91c1c;font-size:.9em;font-weight:bold"></p>
 <div class="card">
 <label>Année scolaire</label><input id="fAnnee" value="2026-2027">
 <label>Cursus</label><select id="fCursus"><option>Franco-arabe</option><option>Arabe uniquement</option></select>
@@ -19,73 +19,119 @@
 <button id="btnGrille" class="gris">Créer les 36 lignes vides 2026-2027</button>
 </div>
 <div id="liste"></div>
-</div>
 <script src="senschool.js"></script>
 <script>
 if(typeof fcfa==='undefined'){window.fcfa=function(n){return (Number(n)||0).toLocaleString('fr-FR')+' FCFA'}}
-var editId=null, dir=false;
-var FR=['Préscolaire','CI','CP','CE1','CE2','CM1','CM2'];
-var NIV=['Niveau 1','Niveau 2','Niveau 3','Niveau 4','Niveau 5'];
-function majClasses(){
-  var c=$('fCursus').value, s=$('fClasse'), cur=s.value;
-  s.innerHTML='';
-  (c==='Arabe uniquement'?NIV:FR).forEach(function(v){var o=document.createElement('option');o.value=o.textContent=v;s.appendChild(o)});
-  if(cur) s.value=cur;
-}
-$('fCursus').onchange=majClasses;
-function viderForm(){editId=null;$('fIns').value=0;$('fMen').value=0;$('btnSave').textContent='Enregistrer le tarif'}
-$('btnCancel').onclick=viderForm;
-$('btnGrille').onclick=function(){
-  if(!dir){alert('Réservé au directeur.');return}
-  var l=brut('frais')||[];
-  var aDeja=l.some(function(t){return (t.anneeScolaire||t.annee||'2026-2027')==='2026-2027'});
-  if(aDeja){alert('La grille 2026-2027 existe déjà. Modifie ligne par ligne.');return}
-  if(!confirm('Créer les 36 lignes vides ? Tu mettras ensuite les montants.'))return;
-  [['Franco-arabe',FR],['Arabe uniquement',NIV]].forEach(function(g){
-    g[1].forEach(function(cl){
-      ['Standard','Semi-internat','Internat'].forEach(function(rg){
-        l.push({id:'t'+Date.now().toString(36)+Math.floor(Math.random()*999),anneeScolaire:'2026-2027',cursus:g[0],classe:cl,regime:rg,inscription:0,mensualite:0});
+(function(){
+  var editId=null, dir=false;
+  var FR=['Préscolaire','CI','CP','CE1','CE2','CM1','CM2'];
+  var NIV=['Niveau 1','Niveau 2','Niveau 3','Niveau 4','Niveau 5'];
+  var REG=['Standard','Semi-internat','Internat'];
+
+  function erreur(m){$('etat').textContent=m||''}
+  function liste(){try{return (brut('frais')||[]).slice()}catch(e){return []}}
+  function enregistrer(l){ecrire('frais',l)}
+
+  function droits(){
+    try{dir=!!estDirecteur()}catch(e){dir=false}
+    $('btnSave').disabled=!dir;
+    $('btnGrille').disabled=!dir;
+  }
+  function majClasses(){
+    var s=$('fClasse'),cur=s.value;
+    s.innerHTML='';
+    (($('fCursus').value==='Arabe uniquement')?NIV:FR).forEach(function(v){
+      var o=document.createElement('option');o.value=o.textContent=v;s.appendChild(o);
+    });
+    if(cur)s.value=cur;
+  }
+  function viderForm(){
+    editId=null;$('fIns').value=0;$('fMen').value=0;$('btnSave').textContent='Enregistrer le tarif';
+  }
+
+  $('fCursus').onchange=majClasses;
+  $('btnCancel').onclick=viderForm;
+
+  $('btnGrille').onclick=function(){
+    if(!dir){alert('Réservé au directeur.');return}
+    var l=liste();
+    var aDeja=l.some(function(t){return (t.anneeScolaire||t.annee||'2026-2027')==='2026-2027'});
+    if(aDeja){alert('La grille 2026-2027 existe déjà. Modifie ligne par ligne.');return}
+    if(!confirm('Créer les 36 lignes vides ? Tu mettras ensuite les montants.'))return;
+    [['Franco-arabe',FR],['Arabe uniquement',NIV]].forEach(function(g){
+      g[1].forEach(function(cl){
+        REG.forEach(function(rg){
+          l.push({id:'t'+Date.now().toString(36)+Math.floor(Math.random()*99999),anneeScolaire:'2026-2027',cursus:g[0],classe:cl,regime:rg,inscription:0,mensualite:0});
+        });
       });
     });
-  });
-  ecrire('frais',l); afficher(); alert('✅ 36 lignes créées. Mets les montants.');
-};
-$('btnSave').onclick=function(){
-  if(!dir){alert('Réservé au directeur.');return}
-  var an=$('fAnnee').value.trim()||'2026-2027';
-  var cu=$('fCursus').value, cl=$('fClasse').value, rg=$('fRegime').value;
-  var ins=Number($('fIns').value)||0, men=Number($('fMen').value)||0;
-  if(ins<0||men<0){alert('Montants invalides.');return}
-  var l=brut('frais')||[];
-  if(editId){
-    var r=l.find(function(x){return x.id===editId}); if(!r)return;
-    r.anneeScolaire=an;r.cursus=cu;r.classe=cl;r.regime=rg;r.inscription=ins;r.mensualite=men;
-  }else{
-    var dbl=l.find(function(x){return (x.anneeScolaire||'2026-2027')===an && x.cursus===cu && (x.classe||'')===cl && x.regime===rg});
-    if(dbl){alert('Ce tarif existe déjà. Clique Modifier dans la liste.');return}
-    l.push({id:'t'+Date.now().toString(36),anneeScolaire:an,cursus:cu,classe:cl,regime:rg,inscription:ins,mensualite:men});
-  }
-  ecrire('frais',l); viderForm(); afficher();
-};
-function afficher(){
-  var z=$('liste'); z.innerHTML='';
-  var l=(brut('frais')||[]).slice().sort(function(a,b){
-    return ((a.cursus||'')+(a.classe||'')+(a.regime||'')).localeCompare((b.cursus||'')+(b.classe||'')+(b.regime||''));
-  });
-  if(!l.length)z.textContent='Aucun tarif. Clique « Créer les 36 lignes ».';
-  l.forEach(function(t){
-    var d=document.createElement('div');d.className='card';
-    var an=t.anneeScolaire||t.annee||'2026-2027';
-    d.innerHTML='<b>'+t.cursus+' — '+(t.classe||'-')+' — '+t.regime+' — '+an+'</b><br>Inscription : '+fcfa(t.inscription)+' · Mensualité : '+fcfa(t.mensualite);
-    if(dir){
-      var b1=document.createElement('button');b1.textContent='Modifier';b1.className='petit gris';b1.style.marginRight='6px';
-      b1.onclick=function(){$('fAnnee').value=an;$('fCursus').value=t.cursus;majClasses();$('fClasse').value=t.classe||'';$('fRegime').value=t.regime;$('fIns').value=t.inscription;$('fMen').value=t.mensualite;editId=t.id;$('btnSave').textContent='Mettre à jour';window.scrollTo(0,0)};
-      var b2=document.createElement('button');b2.textContent='Supprimer';b2.className='petit rouge';
-      b2.onclick=function(){if(!confirm('Supprimer ce tarif ?'))return;ecrire('frais',(brut('frais')||[]).filter(function(x){return x.id!==t.id}));afficher()};
-      d.appendChild(document.createElement('br'));d.appendChild(b1);d.appendChild(b2);
+    enregistrer(l);rafraichir();alert('✅ 36 lignes créées. Mets les montants.');
+  };
+
+  $('btnSave').onclick=function(){
+    if(!dir){alert('Réservé au directeur.');return}
+    var an=$('fAnnee').value.trim()||'2026-2027';
+    var cu=$('fCursus').value, cl=$('fClasse').value, rg=$('fRegime').value;
+    var ins=Number($('fIns').value)||0, men=Number($('fMen').value)||0;
+    if(ins<0||men<0){alert('Montants invalides.');return}
+    var l=liste();
+    if(editId){
+      var r=l.find(function(x){return x.id===editId});if(!r)return;
+      r.anneeScolaire=an;r.cursus=cu;r.classe=cl;r.regime=rg;r.inscription=ins;r.mensualite=men;
+    }else{
+      var dbl=l.find(function(x){return (x.anneeScolaire||'2026-2027')===an && x.cursus===cu && (x.classe||'')===cl && x.regime===rg});
+      if(dbl){alert('Ce tarif existe déjà. Clique Modifier dans la liste.');return}
+      l.push({id:'t'+Date.now().toString(36)+Math.floor(Math.random()*99999),anneeScolaire:an,cursus:cu,classe:cl,regime:rg,inscription:ins,mensualite:men});
     }
-    z.appendChild(d);
-  });
-}
-quandPret(function(){dir=estDirecteur();majClasses();$('zone').hidden=false;afficher();setTimeout(afficher,2500)});
+    enregistrer(l);viderForm();rafraichir();
+  };
+
+  function afficher(){
+    var z=$('liste');z.innerHTML='';
+    var l=liste();
+    // Donne un identifiant aux anciens tarifs qui n'en ont pas
+    var modifie=false;
+    l.forEach(function(t){if(!t.id){t.id='t'+Date.now().toString(36)+Math.floor(Math.random()*99999);modifie=true}});
+    if(modifie&&dir)enregistrer(l);
+    l.sort(function(a,b){
+      return ((a.cursus||'')+(a.classe||'')+(a.regime||'')).localeCompare((b.cursus||'')+(b.classe||'')+(b.regime||''));
+    });
+    if(!l.length){z.textContent='Aucun tarif. Clique « Créer les 36 lignes ».';return}
+    l.forEach(function(t){
+      var an=t.anneeScolaire||t.annee||'2026-2027';
+      var d=document.createElement('div');d.className='card';
+      var b=document.createElement('b');
+      b.textContent=(t.cursus||'')+' — '+(t.classe||'⚠️ classe manquante')+' — '+(t.regime||'')+' — '+an;
+      var p=document.createElement('div');p.style.margin='6px 0';
+      p.textContent='Inscription : '+fcfa(t.inscription)+' · Mensualité : '+fcfa(t.mensualite);
+      d.appendChild(b);d.appendChild(p);
+      if(dir){
+        var b1=document.createElement('button');b1.textContent='Modifier';b1.className='petit gris';b1.style.marginRight='6px';
+        b1.onclick=function(){
+          $('fAnnee').value=an;$('fCursus').value=t.cursus||'Franco-arabe';majClasses();
+          $('fClasse').value=t.classe||'';$('fRegime').value=t.regime||'Standard';
+          $('fIns').value=t.inscription||0;$('fMen').value=t.mensualite||0;
+          editId=t.id;$('btnSave').textContent='Mettre à jour';window.scrollTo(0,0);
+        };
+        var b2=document.createElement('button');b2.textContent='Supprimer';b2.className='petit rouge';
+        b2.onclick=function(){
+          if(!confirm('Supprimer ce tarif ?'))return;
+          enregistrer(liste().filter(function(x){return x.id!==t.id}));rafraichir();
+        };
+        d.appendChild(b1);d.appendChild(b2);
+      }
+      z.appendChild(d);
+    });
+  }
+
+  function rafraichir(){
+    droits();
+    try{afficher();erreur('')}catch(e){erreur('⚠️ Problème : '+e.message)}
+  }
+
+  majClasses();
+  rafraichir();
+  setTimeout(rafraichir,1500);
+  setTimeout(rafraichir,4000);
+})();
 </script></body></html>
