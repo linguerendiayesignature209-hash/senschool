@@ -16,7 +16,7 @@
 const DEBUT_MOIS=9; // 9 = octobre (0 = janvier)
 const MOIS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 remplir($('annee'),['2026-2027','2027-2028']);
-function tarif(e){return lire('frais').find(x=>x.anneeScolaire===e.anneeScolaire&&x.cursus===e.cursus&&x.regime===e.regime)}
+function tarif(e){return tarifPour(e)}
 function somme(nom,annee,type){return lire('pai').filter(p=>p.nomEleve===nom&&p.anneeScolaire===annee&&p.typePaiement===type).reduce((s,p)=>s+p.montant,0)}
 function moisEchus(annee){
   const a=Number(annee.split('-')[0]),auj=new Date();let n=0;
