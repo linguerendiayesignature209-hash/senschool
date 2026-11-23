@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Audit</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
+<h1>Audit des données</h1>
+<p>Lecture seule : cette page ne modifie rien.</p>
+<div id="etat" class="card"></div>
+<button id="relance" class="petit gris">Relancer l'audit</button>
+<h2>Vérifier une sauvegarde</h2>
+<p>Choisis le fichier de sauvegarde téléchargé.</p>
+<input type="file" id="fichier" accept=".json,application/json">
+<div id="verif" class="card" hidden></div>
+<h2>Rapport à m'envoyer</h2>
+<p>Il ne contient aucun nom d'élève.</p>
+<textarea id="rapport" readonly rows="14" style="width:100%;box-sizing:border-box;font-size:.8em"></textarea>
+<script src="senschool.js"></script><script src="senschool-outils.js"></script><script src="senschool-finance.js"></script>
+<script>
+const NOMS={insc:'Élèves',frais:'Tarifs',pai:'Paiements',dep:'Dépenses'};
+const ANCIENS=['aide','statutAide','statutSocial','reducInscription','reducMensualite','reduction'];
+const ICO={ok:'✅ ',warn:'⚠️ ',err:'❌ ',info:'• '};
+function compte(l,f){return l.filter(f).length}
+function doublons(l,cle){const m={};l.forEach(function(x){const k=cle(x);if(k)m[k]=(m[k]||0)+1});return Object.keys(m).filter(function(k){return m[k]>1})}
+function empreinte(s){let h=5381;for(let i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0}return (h>>>0).toString(16).padStart(8,'0')}
+function afficherLignes(zone,L){
+  zone.innerHTML='';
+  L.forEach(function(t){const d=document.createElement('div');d.textContent=t||'\u00a0';d.style.margin='3px 0';if(t.indexOf('— ')===0)d.style.fontWeight='bold';zone.appendChild(d)});
+}
+function audit(){
+  const L=[];
+  function add(n,t){L.push(ICO[n]+t)}
+  function titre(t){L.push('');L.push('— '+t+' —')}
+  const insc=brut('insc'),pai=brut('pai'),dep=brut('dep'),frais=brut('frais');
+  const actifs=insc.filter(function(e){return !e.archive});
+  titre('Contenu');
+  add('info','Élèves : '+insc.length+' ('+actifs.length+' actifs, '+(insc.length-actifs.length)+' archivés)');
+  add('info','Paiements : '+pai.length+' ('+compte(pai,function(p){return !p.archive})+' valides, '+compte(pai,function(p){return p.archive})+' annulés)');
+  add('info','Dépenses : '+dep.length+' ('+compte(dep,function(d){return d.archive})+' supprimées)');
+  add('info','Tarifs : '+frais.length+' ('+compte(frais,function(f){return f.classe})+' par classe, '+compte(frais,function(f){return !f.classe})+' anciens)');
+
+  titre('Élèves');
+  const sm=compte(insc,function(e){return !e.matricule}),si=compte(insc,function(e){return !e.id});
+  add(sm?'warn':'ok',sm+' élève(s) sans matricule');
+  add(si?'warn':'ok',si+' élève(s) sans identifiant unique');
+  const dm=doublons(insc,function(e){return e.matricule?e.matricule+'|'+e.anneeScolaire:''});
+  add(dm.length?'err':'ok',dm.length?'Matricule en double la même année : '+dm.map(function(k){return k.split('|')[0]}).join(', '):'Aucun matricule en double');
+  const dn=doublons(actifs,function(e){return String(e.nom||'').trim().toLowerCase()+'|'+e.anneeScolaire});
+  add(dn.length?'warn':'ok',dn.length+' nom(s) en double la même année (à vérifier)');
+  const sc=compte(actifs,function(e){return FIN.classeDe(e)===''});
+  add(sc?'warn':'ok',sc+' élève(s) sans classe française');
+
+  titre('Paiements');
+  const ps=compte(pai,function(p){return !p.id}),pr=compte(pai,function(p){return !p.numeroRecu});
+  add(ps?'warn':'ok',ps+' paiement(s) sans identifiant');
+  add(pr?'warn':'ok',pr+' paiement(s) sans numéro de reçu');
+  const dr=doublons(pai,function(p){return p.numeroRecu});
+  add(dr.length?'err':'ok',dr.length?'Numéro de reçu en double : '+dr.join(', '):'Aucun numéro de reçu en double');
+  const pmat=compte(pai,function(p){return !p.matricule});
+  add(pmat?'warn':'ok',pmat+' paiement(s) sans matricule (rattachés par le nom)');
+  add('info',compte(pai,function(p){return !p.eleveId})+' paiement(s) sans identifiant élève (normal avant la migration)');
+  const inv=compte(pai,function(p){return !(Number(p.montant)>0)});
+  add(inv?'err':'ok',inv+' paiement(s) avec un montant invalide');
+  const orph=compte(pai,function(p){return !insc.some(function(e){return e.anneeScolaire===p.anneeScolaire&&(p.matricule?e.matricule===p.matricule:e.nom===p.nomEleve)})});
+  add(orph?'err':'ok',orph+' paiement(s) dont l\'élève est introuvable');
+
+  titre('Cas sociaux');
+  ANCIENS.forEach(function(c){add('info',c+' : '+compte(insc,function(e){return e[c]!==undefined&&e[c]!==''})+' élève(s)')});
+  const mel=compte(insc,function(e){return ['statutAide','statutSocial','reducInscription','reducMensualite','reduction'].filter(function(c){return e[c]!==undefined&&e[c]!==''}).length>1});
+  add(mel?'warn':'ok',mel+' élève(s) avec plusieurs formats mélangés');
+  add('info','Gratuits : '+compte(actifs,function(e){return FIN.aideDe(e).type==='Gratuit'})+' — Réductions : '+compte(actifs,function(e){return FIN.aideDe(e).type==='Réduction'}));
+
+  titre('Tarifs');
+  const dt=doublons(frais.filter(function(f){return f.classe&&!f.archive}),function(f){return f.anneeScolaire+'|'+f.classe+'|'+(f.regime||'Tous')});
+  add(dt.length?'err':'ok',dt.length?'Tarifs en double : '+dt.join(', '):'Aucun tarif en double');
+  const st=actifs.filter(function(e){return !FIN.tarifBase(e)&&FIN.aideDe(e).type!=='Gratuit'});
+  add(st.length?'warn':'ok',st.length+' élève(s) actif(s) sans tarif par classe');
+  const cm={};st.forEach(function(e){const k=e.anneeScolaire+' / '+(FIN.classeDe(e)||'sans classe');cm[k]=(cm[k]||0)+1});
+  Object.keys(cm).forEach(function(k){add('warn','Tarif manquant : '+k+' ('+cm[k]+' élève(s))')});
+
+  titre('Calendrier utilisé');
+  add('info',FIN.CAL.nbMensualites+' mensualités, à partir du mois n°'+(FIN.CAL.debutMois+1)+', limite le '+FIN.CAL.jourLimite+' de chaque mois');
+
+  titre('Empreintes (pour comparer avant et après)');
+  Object.keys(NOMS).forEach(function(c){const t=brut(c);add('info',NOMS[c]+' : '+t.length+' enregistrement(s), empreinte '+empreinte(JSON.stringify(t)))});
+  const d=localStorage.getItem('ss_derniere_sauvegarde');
+  add(d?'ok':'warn',d?'Dernière sauvegarde sur ce téléphone : '+dateFr(d.slice(0,10)):'Aucune sauvegarde faite sur ce téléphone');
+
+  const ne=L.filter(function(t){return t.indexOf('❌')===0}).length,nw=L.filter(function(t){return t.indexOf('⚠️')===0}).length;
+  L.unshift('Audit SenSchool du '+dateFr(new Date().toISOString().slice(0,10))+' : '+ne+' erreur(s), '+nw+' avertissement(s)');
+  afficherLignes($('etat'),L);
+  $('rapport').value=L.join('\n');
+}
+function montrerVerif(L){const z=$('verif');z.hidden=false;afficherLignes(z,L)}
+$('fichier').onchange=function(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=function(){
+    let j;try{j=JSON.parse(r.result)}catch(e){montrerVerif(['❌ Fichier illisible : ce n\'est pas une sauvegarde.']);return}
+    const d=j.donnees||j.data||j,L=[];
+    L.push('Sauvegarde'+(j.date?' du '+dateFr(String(j.date).slice(0,10)):'')+' :');
+    let bon=true;
+    Object.keys(NOMS).forEach(function(c){
+      let v=d[c];
+      if(typeof v==='string'){try{v=JSON.parse(v)}catch(e){v=null}}
+      if(!Array.isArray(v)){L.push('❌ '+NOMS[c]+' : absent de la sauvegarde');bon=false;return}
+      const sav=new Set(v.map(function(x){return JSON.stringify(x)}));
+      const cur=brut(c).map(function(x){return JSON.stringify(x)});
+      const manque=cur.filter(function(x){return !sav.has(x)}).length;
+      if(manque)bon=false;
+      L.push((manque?'⚠️ ':'✅ ')+NOMS[c]+' : sauvegarde '+v.length+', actuel '+cur.length+(manque?' — '+manque+' enregistrement(s) nouveau(x) ou modifié(s) depuis':' — identique'));
+    });
+    L.push(bon?'✅ Sauvegarde complète : elle contient toutes les données actuelles.':'⚠️ Des données ont changé depuis cette sauvegarde. Refais-en une juste avant toute migration.');
+    montrerVerif(L);
+  };
+  r.readAsText(f);
+};
+$('relance').onclick=audit;
+quandPret(function(){audit();setTimeout(audit,2500)});
+</script></body></html>
