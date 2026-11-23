@@ -6,8 +6,7 @@
 <h1>Frais scolaires</h1><p>École Al Islah - Yeumbeul Nord</p>
 <form id="f">
 <label>Année scolaire</label><select id="annee" required><option value="">Choisir une année</option></select>
-<label>Cursus pédagogique</label><select id="cursus" required><option value="">Choisir un cursus</option></select>
-<label>Régime scolaire</label><select id="regime" required><option value="">Choisir un régime</option></select>
+<label>Classe</label><select id="classe" required><option value="">Choisir une classe</option></select>
 <label>Frais d'inscription (une fois par an, FCFA)</label><input id="inscription" type="number" min="0" required>
 <label>Mensualité (par mois, FCFA)</label><input id="mensualite" type="number" min="0" required>
 <button type="submit">Enregistrer les frais</button>
@@ -15,44 +14,60 @@
 <div id="liste"></div>
 <script src="senschool.js"></script>
 <script>
+const TOUTES='Toutes les classes françaises';
 remplir($('annee'),['2026-2027','2027-2028']);
-remplir($('cursus'),['Franco-arabe','Arabe uniquement']);
-remplir($('regime'),['Standard','Semi-internat','Internat']);
-function memeTarif(a,b){return a.anneeScolaire===b.anneeScolaire&&a.cursus===b.cursus&&a.regime===b.regime}
-function afficher(){
-  const z=$('liste');z.innerHTML='';
-  lire('frais').forEach(function(f){
-    const d=document.createElement('div');d.className='card';
-    const t=document.createElement('b');t.textContent=f.anneeScolaire+' — '+f.cursus+' — '+f.regime;d.appendChild(t);
-    const ins=f.inscription||0,men=f.mensualite||0;
-    const m=document.createElement('div');m.style.margin='8px 0';
-    m.textContent='Inscription : '+fcfa(ins)+' — Mensualité : '+fcfa(men)+((!ins&&!men)?' ⚠️ à compléter':'');
-    if(!ins&&!men)m.style.color='#b91c1c';
-    d.appendChild(m);
+remplir($('classe'),[TOUTES].concat(CLASSES_TARIF));
+function carte(z,f,actif){
+  const d=document.createElement('div');d.className='card';
+  const t=document.createElement('b');
+  t.textContent=actif?f.anneeScolaire+' — '+f.classe:f.anneeScolaire+' — '+f.cursus+' — '+f.regime;
+  d.appendChild(t);
+  const m=document.createElement('div');m.style.margin='8px 0';
+  m.textContent='Inscription : '+fcfa(f.inscription||0)+' — Mensualité : '+fcfa(f.mensualite||0);
+  d.appendChild(m);
+  if(actif){
     const bm=document.createElement('button');bm.textContent='Modifier';bm.className='petit gris';bm.style.marginRight='8px';
     bm.onclick=function(){
-      $('annee').value=f.anneeScolaire;$('cursus').value=f.cursus;$('regime').value=f.regime;
-      $('inscription').value=ins||'';$('mensualite').value=men||'';window.scrollTo(0,0);
+      $('annee').value=f.anneeScolaire;$('classe').value=f.classe;
+      $('inscription').value=f.inscription||0;$('mensualite').value=f.mensualite||0;window.scrollTo(0,0);
     };
-    const bs=document.createElement('button');bs.textContent='Supprimer';bs.className='petit rouge';
-    bs.onclick=function(){
-      if(!confirm('Supprimer ce tarif ?'))return;
-      const l=lire('frais').filter(function(r){return !memeTarif(r,f)});
-      ecrire('frais',l);afficher();
-    };
-    d.appendChild(bm);d.appendChild(bs);z.appendChild(d);
-  });
+    d.appendChild(bm);
+  }
+  const bs=document.createElement('button');bs.textContent='Supprimer';bs.className='petit rouge';
+  bs.onclick=function(){
+    if(!confirm('Supprimer ce tarif ?'))return;
+    const l=lire('frais'),k=JSON.stringify(f);
+    const i=l.findIndex(function(r){return JSON.stringify(r)===k});
+    if(i>-1)l.splice(i,1);
+    ecrire('frais',l);afficher();
+  };
+  d.appendChild(bs);z.appendChild(d);
+}
+function afficher(){
+  const z=$('liste');z.innerHTML='';
+  const tous=lire('frais');
+  const neufs=tous.filter(function(f){return f.classe}).sort(function(a,b){
+    return a.anneeScolaire.localeCompare(b.anneeScolaire)||CLASSES_TARIF.indexOf(a.classe)-CLASSES_TARIF.indexOf(b.classe)});
+  const vieux=tous.filter(function(f){return !f.classe});
+  neufs.forEach(function(f){carte(z,f,true)});
+  if(vieux.length){
+    const h=document.createElement('h2');h.textContent='Anciens tarifs (inutilisés)';z.appendChild(h);
+    vieux.forEach(function(f){carte(z,f,false)});
+  }
 }
 afficher();
 $('f').addEventListener('submit',function(e){
   e.preventDefault();
-  const l=lire('frais');
-  const f={anneeScolaire:$('annee').value,cursus:$('cursus').value,regime:$('regime').value,inscription:Number($('inscription').value),mensualite:Number($('mensualite').value)};
-  const x=l.find(function(r){return memeTarif(r,f)});
-  if(x){
-    if(!confirm('Un tarif existe déjà pour cette combinaison. Le remplacer ?'))return;
-    x.inscription=f.inscription;x.mensualite=f.mensualite;delete x.montant;
-  }else l.push(f);
+  const l=lire('frais'),a=$('annee').value;
+  const ins=Number($('inscription').value),men=Number($('mensualite').value);
+  const cl=$('classe').value===TOUTES?CLASSES_TARIF.slice(0,7):[$('classe').value];
+  const existe=cl.some(function(c){return l.some(function(r){return r.anneeScolaire===a&&r.classe===c})});
+  if(existe&&!confirm('Un tarif existe déjà pour cette combinaison. Le remplacer ?'))return;
+  cl.forEach(function(c){
+    const x=l.find(function(r){return r.anneeScolaire===a&&r.classe===c});
+    if(x){x.inscription=ins;x.mensualite=men}
+    else l.push({anneeScolaire:a,classe:c,inscription:ins,mensualite:men});
+  });
   ecrire('frais',l);$('f').reset();afficher();alert('✅ Tarif enregistré.');
 });
 </script></body></html>
