@@ -287,3 +287,18 @@ function trMsg(s){
   const m=document.createElement('meta');m.name='theme-color';m.content='#14532d';h.appendChild(m);
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
 })();
+/* ===== CORRECTION : Tout effacer ===== */
+function effacerTout(){
+  Promise.all(Object.keys(CLES).map(function(c){return envoyer(c,'[]')})).then(function(){
+    Object.values(CLES).forEach(function(k){localStorage.removeItem(k)});
+    alert('✅ Toutes les données ont été effacées.');
+    location.href='senschool-dashboard.html';
+  }).catch(function(e){alert('⚠️ Effacement impossible : '+e.message)});
+}
+function effacerAvecConfirmation(){
+  if(!estDirecteur()){alert('Réservé au directeur.');return}
+  const r=prompt('Pour supprimer TOUTES les données (définitif), écris EFFACER :');
+  if(r===null)return;
+  if(r.trim().toUpperCase()!=='EFFACER'){alert("Mot incorrect : rien n'a été effacé.");return}
+  effacerTout();
+}
