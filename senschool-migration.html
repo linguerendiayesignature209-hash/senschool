@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Migration financière</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
+<h1>Migration financière</h1>
+<p>Elle ajoute seulement des champs. Elle ne supprime rien et ne change aucun montant, reçu ou date.</p>
+<h2>1. Essai à blanc</h2>
+<p>Cette partie ne modifie rien.</p>
+<label><input type="checkbox" id="noms" style="width:auto;margin-right:8px">Nettoyer aussi les doubles espaces dans les noms</label>
+<div id="plan" class="card"></div>
+<h2>2. Sauvegarde vérifiée</h2>
+<p>Recharge l'application, télécharge une sauvegarde neuve (📦 Sauvegarde et restauration), puis choisis-la ici.</p>
+<input type="file" id="fichier" accept=".json,application/json">
+<div id="verif" class="card" hidden></div>
+<h2>3. Application (directeur)</h2>
+<p>Personne d'autre ne doit utiliser l'application pendant ce temps.</p>
+<button id="go" disabled>Appliquer la migration</button>
+<div id="res" class="card" hidden></div>
+<script src="senschool.js"></script><script src="senschool-outils.js"></script><script src="senschool-finance.js"></script>
+<script>
+const NOMS={insc:'Élèves',frais:'Tarifs',pai:'Paiements',dep:'Dépenses'};
+const UNIFORME=6000;
+let sauv=null;
+function empreinte(s){let h=5381;for(let i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0}return (h>>>0).toString(16).padStart(8,'0')}
+function propre(n){return String(n||'').replace(/\s+/g,' ').trim()}
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function lignes(zone,L){zone.hidden=false;zone.innerHTML='';L.forEach(function(t){const d=document.createElement('div');d.textContent=t||'\u00a0';d.style.margin='3px 0';zone.appendChild(d)})}
+
+function calculer(){
+  const nettoyer=$('noms').checked,quand=new Date().toISOString(),qui=cloud?cloud.user.email:'';
+  const insc=clone(brut('insc')),frais=clone(brut('frais')),pai=clone(brut('pai'));
+  const J=[],chg={insc:0,frais:0,pai:0},ren={};
+  frais.forEach(function(f){
+    if(f.classe&&f.uniforme===undefined){f.uniforme=UNIFORME;f.schema=2;chg.frais++;J.push('Tarif '+f.anneeScolaire+' / '+f.classe+' : + uniforme '+UNIFORME)}
+  });
+  if(nettoyer)insc.forEach(function(e){
+    const n=propre(e.nom);
+    if(n!==e.nom){e.nom=n;chg.insc++;ren[e.matricule+'|'+e.anneeScolaire]=n;J.push('Élève '+(e.matricule||e.id)+' : espaces du nom nettoyés')}
+  });
+  const ordre=pai.map(function(p,i){return i}).sort(function(a,b){
+    return String(pai[a].datePaiement).localeCompare(String(pai[b].datePaiement))||String(pai[a].cree).localeCompare(String(pai[b].cree))});
+  const cum={};
+  ordre.forEach(function(i){
+    const p=pai[i],ajouts=[];
+    const e=insc.find(function(x){return x.anneeScolaire===p.anneeScolaire&&(p.matricule?x.matricule===p.matricule:x.nom===p.nomEleve)});
+    if(!e){J.push('⚠️ '+(p.numeroRecu||p.id)+' : élève introuvable, laissé tel quel');return}
+    if(!p.eleveId){p.eleveId=e.id;ajouts.push('eleveId')}
+    if(ren[e.matricule+'|'+e.anneeScolaire]&&p.nomEleve!==e.nom){p.nomEleve=e.nom;ajouts.push('nom nettoyé')}
+    if(!p.archive&&(p.typePaiement==='Mensualité'||p.typePaiement==='Inscription')){
+      const t=FIN.tarifPour(e);
+      if(p.typePaiement==='Mensualité'){
+        const avant=cum[e.id]||0,apres=avant+(Number(p.montant)||0);cum[e.id]=apres;
+        if(!p.moisCouverts){
+          const m=t?t.mensualite:0;
+          if(m>0){
+            const ms=FIN.mois(e.anneeScolaire),a=Math.floor(avant/m),b=Math.ceil(apres/m);
+            p.moisCouverts=ms.slice(a,Math.min(b,ms.length)).map(function(x){return x.cle});
+            ajouts.push('moisCouverts '+p.moisCouverts.join(', '));
+          }else J.push('⚠️ '+(p.numeroRecu||p.id)+' : pas de tarif, mois couverts non calculés');
+        }
+      }
+      if(!p.tarifApplique&&t){p.tarifApplique={inscription:t.inscription,mensualite:t.mensualite,source:'migration'};ajouts.push('tarifApplique')}
+    }
+    if(ajouts.length){p.schema=2;p.migreLe=quand;p.migrePar=qui;chg.pai++;J.push((p.numeroRecu||p.id)+' : + '+ajouts.join(', '))}
+  });
+  return {insc:insc,frais:frais,pai:pai,chg:chg,J:J,total:chg.insc+chg.frais+chg.pai};
+}
+function afficherPlan(){
+  const P=calculer();
+  const L=['Tarifs à compléter : '+P.chg.frais,'Paiements à compléter : '+P.chg.pai,'Noms à nettoyer : '+P.chg.insc,'Suppressions : 0','Montants, reçus et dates : jamais modifiés',''];
+  L.push(P.total?'Détail :':'✅ Tout est déjà à jour.');
+  lignes($('plan'),L.concat(P.J));
+}
+function verifier(j){
+  const d=j.donnees||j.data||j,L=[];let ok=true;
+  Object.keys(NOMS).forEach(function(c){
+    let v=d[c];if(typeof v==='string'){try{v=JSON.parse(v)}catch(e){v=null}}
+    if(!Array.isArray(v)){L.push('❌ '+NOMS[c]+' : absent de la sauvegarde');ok=false;return}
+    const sav=new Set(v.map(function(x){return JSON.stringify(x)})),cur=brut(c).map(function(x){return JSON.stringify(x)});
+    const manque=cur.filter(function(x){return !sav.has(x)}).length,bon=manque===0&&v.length===cur.length;
+    if(!bon)ok=false;
+    L.push((bon?'✅ ':'❌ ')+NOMS[c]+' : sauvegarde '+v.length+', actuel '+cur.length+(bon?' — identique':' — différent'));
+  });
+  return {ok:ok,L:L};
+}
+$('fichier').onchange=function(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=function(){
+    let j;try{j=JSON.parse(r.result)}catch(e){sauv=null;lignes($('verif'),['❌ Fichier illisible.']);$('go').disabled=true;return}
+    sauv=j;const v=verifier(j),L=v.L.slice();
+    L.push(v.ok?'✅ Sauvegarde identique aux données actuelles.':'❌ Sauvegarde différente : recharge l\'application, télécharges-en une neuve et rechoisis-la.');
+    if(!estDirecteur())L.push('⚠️ Seul le directeur peut appliquer la migration.');
+    lignes($('verif'),L);$('go').disabled=!(v.ok&&estDirecteur());
+  };
+  r.readAsText(f);
+};
+$('go').onclick=function(){
+  if(!estDirecteur()){alert('Réservé au directeur.');return}
+  if(!sauv||!verifier(sauv).ok){alert('Choisis une sauvegarde identique aux données actuelles.');return}
+  const P=calculer();
+  if(!P.total){alert('Rien à migrer : tout est déjà à jour.');return}
+  if(!confirm('Appliquer la migration ? Seuls des champs sont ajoutés. Personne d\'autre ne doit utiliser l\'application pendant ce temps.'))return;
+  const av={};Object.keys(NOMS).forEach(function(c){av[c]=empreinte(JSON.stringify(brut(c)))});
+  const jobs=[];
+  ['insc','frais','pai'].forEach(function(c){
+    if(!P.chg[c])return;
+    const s=JSON.stringify(P[c]);localStorage.setItem(CLES[c],s);jobs.push(envoyer(c,s));
+  });
+  $('go').disabled=true;
+  Promise.all(jobs).then(function(){
+    const ap={};Object.keys(NOMS).forEach(function(c){ap[c]=empreinte(JSON.stringify(brut(c)))});
+    const rap={application:'SenSchool',type:'rapport-migration-finance',date:new Date().toISOString(),par:cloud.user.email,avant:av,apres:ap,modifications:P.J};
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([JSON.stringify(rap,null,1)],{type:'application/json'}));
+    a.download='senschool-rapport-migration-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+    sauv=null;
+    lignes($('res'),['✅ Migration appliquée.','Tarifs : '+P.chg.frais+' — Paiements : '+P.chg.pai+' — Noms : '+P.chg.insc,'Un rapport de migration a été téléchargé.','Lance l\'audit pour vérifier.']);
+    afficherPlan();
+  }).catch(function(e){alert('⚠️ Erreur : '+e.message+'. Restaure la sauvegarde si besoin.')});
+};
+$('noms').onchange=afficherPlan;
+quandPret(function(){afficherPlan();setTimeout(afficherPlan,2500)});
+</script></body></html>
