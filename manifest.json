@@ -1,0 +1,17 @@
+{
+  "name": "SenSchool - École Al Islah",
+  "short_name": "SenSchool",
+  "description": "Gestion de l'école franco-arabe Al Islah",
+  "start_url": "./senschool-dashboard.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f1e8",
+  "theme_color": "#14532d",
+  "lang": "fr",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
