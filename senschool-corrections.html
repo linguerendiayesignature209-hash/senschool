@@ -13,17 +13,19 @@
 </div>
 <script src="senschool.js"></script><script src="senschool-outils.js"></script>
 <script>
+if(typeof fcfa==='undefined'){window.fcfa=function(n){return (Number(n)||0).toLocaleString('fr-FR')+' FCFA'}}
+if(typeof dateFr==='undefined'){window.dateFr=function(d){return (d||'').slice(0,10).split('-').reverse().join('/')}}
 let onglet='insc',dir=false;
 const LIMITE=['telParent','nomParent','dateNaissance','adresse'];
 const CH={
- insc:[['nom','Nom','text'],['nomParent','Nom du parent / tuteur','text'],['telParent','Téléphone WhatsApp du parent','tel'],['dateNaissance','Date de naissance','date'],['adresse','Adresse','text'],['classeFrancaise','Classe française','select',['','Préscolaire','CI','CP','CE1','CE2','CM1','CM2']],['niveauArabe','Niveau arabe','select',['Niveau 1','Niveau 2','Niveau 3','Niveau 4','Niveau 5']],['cursus','Cursus','select',['Franco-arabe','Arabe uniquement']],['regime','Régime','select',['Standard','Semi-internat','Internat']]],
+ insc:[['nom','Nom','text'],['nomParent','Nom du parent / tuteur','text'],['telParent','Téléphone WhatsApp du parent','tel'],['dateNaissance','Date de naissance','date'],['adresse','Adresse','text'],['classeFrancaise','Classe française','select',['','Préscolaire','CI','CP','CE1','CE2','CM1','CM2']],['niveauArabe','Niveau arabe','select',['Niveau 1','Niveau 2','Niveau 3','Niveau 4','Niveau 5']],['cursus','Cursus','select',['Franco-arabe','Arabe uniquement']],['regime','Régime','select',['Standard','Semi-internat','Internat']],['statutAide','Cas social (directeur seul)','select',['Normal','Gratuité totale','Réduction']],['reducInscription','Remise inscription (FCFA)','number'],['reducMensualite','Remise mensualité / mois (FCFA)','number'],['motifAide','Motif du cas social','text']],
  pai:[['typePaiement','Type','select',['Inscription','Mensualité','Autres frais']],['montant','Montant (FCFA)','number'],['datePaiement','Date','date']],
  dep:[['motif','Motif','text'],['montant','Montant (FCFA)','number'],['date','Date','date']]
 };
 const LIB={insc:['Archiver','Restaurer'],pai:['Annuler ce paiement','Rétablir'],dep:['Supprimer','Rétablir']};
 const ETAT={insc:'ARCHIVÉ',pai:'ANNULÉ',dep:'SUPPRIMÉ'};
 function resume(c,r){
-  if(c==='insc')return (r.matricule||'-')+' — '+r.nom+' — '+(r.classeFrancaise||r.cursus)+' — '+r.anneeScolaire+(r.telParent?' — '+r.telParent:' — ⚠️ pas de téléphone');
+  if(c==='insc'){var b=(r.matricule||'-')+' — '+r.nom+' — '+(r.classeFrancaise||r.niveauArabe||r.cursus)+' — '+(r.anneeScolaire||'');if(r.statutAide&&r.statutAide!=='Normal')b+=' — 🎓 '+r.statutAide;if(!r.telParent)b+=' — ⚠️ pas de téléphone';return b}
   if(c==='pai')return (r.numeroRecu||'-')+' — '+dateFr(r.datePaiement)+' — '+r.nomEleve+' — '+r.typePaiement+' — '+fcfa(r.montant);
   return dateFr(r.date)+' — '+r.motif+' — '+fcfa(r.montant);
 }
@@ -43,6 +45,7 @@ function afficher(){
     if(r.archive)s+=(s?' · ':'')+ETAT[onglet]+(r.archivePar?' par '+r.archivePar:'');
     const h=r.hist&&r.hist[r.hist.length-1];
     if(h)s+=(s?' · ':'')+'✏️ modifié par '+h.par+' le '+dateFr(h.le.slice(0,10));
+    if(onglet==='insc'&&typeof totauxEleveB!=='undefined'){try{var tt=totauxEleveB(r);s+=(s?' · ':'')+'Reste : '+fcfa(tt.resteTotal)}catch(e){}}
     info.textContent=s;d.appendChild(info);
     function bouton(txt,cls,f){const b=document.createElement('button');b.textContent=txt;b.className='petit '+cls;b.style.marginRight='6px';b.onclick=f;d.appendChild(b)}
     if(!r.archive)bouton(dir?'Modifier':'Compléter la fiche','gris',function(){ouvrirEdition(onglet,r)});
@@ -62,7 +65,7 @@ function ouvrirEdition(c,r){
     let el;
     if(d[2]==='select'){el=document.createElement('select');d[3].forEach(function(v){const o=document.createElement('option');o.value=o.textContent=v;el.appendChild(o)})}
     else{el=document.createElement('input');el.type=d[2]}
-    el.value=r[d[0]]!==undefined?r[d[0]]:'';
+    el.value=r[d[0]]!==undefined?r[d[0]]:(d[0]==='statutAide'?'Normal':'');
     z.appendChild(el);champs[d[0]]=el;
   });
   const ok=document.createElement('button');ok.textContent='Enregistrer';ok.onclick=function(){sauver(c,r.id,champs)};
@@ -74,18 +77,15 @@ function sauver(c,id,champs){
   const avant={};
   for(const k of Object.keys(champs)){
     let v=champs[k].value;
-    if(champs[k].type==='number'){v=Number(v);if(!(v>0)){alert('Montant invalide.');return}}
+    if(k==='reducInscription'||k==='reducMensualite'){v=Number(v)||0}
+    else if(champs[k].type==='number'){v=Number(v);if(!(v>0)){alert('Montant invalide.');return}}
     if(k==='nom'&&!String(v).trim()){alert('Le nom est obligatoire.');return}
     if(typeof v==='string')v=v.trim();
     if(r[k]!==v&&!(r[k]===undefined&&v==='')){avant[k]=r[k];r[k]=v}
   }
   if(!Object.keys(avant).length){$('edition').hidden=true;return}
   r.hist=(r.hist||[]).concat([{le:new Date().toISOString(),par:cloud.user.email,avant:avant}]);
-  if(c==='insc'&&avant.nom!==undefined){
-    const pl=brut('pai');
-    pl.forEach(function(p){if(p.matricule&&p.matricule===r.matricule)p.nomEleve=r.nom});
-    ecrire('pai',pl);
-  }
+  if(c==='insc'&&avant.nom!==undefined){const pl=brut('pai');pl.forEach(function(p){if(p.matricule&&p.matricule===r.matricule)p.nomEleve=r.nom});ecrire('pai',pl)}
   ecrire(c,l);$('edition').hidden=true;afficher();alert('✅ Modification enregistrée.');
 }
 function basculer(c,id){
@@ -97,27 +97,20 @@ function basculer(c,id){
 }
 function supprimerEleve(r){
   const aPai=brut('pai').some(function(p){return p.matricule?p.matricule===r.matricule:p.nomEleve===r.nom});
-  if(aPai){alert("Impossible : cet élève a des paiements enregistrés. Il reste archivé pour garder l'historique.");return}
-  if(!confirm('Supprimer DÉFINITIVEMENT '+r.nom+' ? Cette action ne peut pas être annulée.'))return;
+  if(aPai){alert("Impossible : cet élève a des paiements. Il reste archivé.");return}
+  if(!confirm('Supprimer DÉFINITIVEMENT '+r.nom+' ?'))return;
   const s=JSON.stringify(brut('insc').filter(function(x){return x.id!==r.id}));
   localStorage.setItem(CLES.insc,s);
   envoyer('insc',s).catch(function(e){alert('⚠️ Erreur : '+e.message)});
   afficher();
 }
 document.querySelectorAll('[data-t]').forEach(function(b){
-  b.onclick=function(){
-    onglet=b.dataset.t;
-    document.querySelectorAll('[data-t]').forEach(function(x){x.className='petit gris'});
-    b.className='petit';$('edition').hidden=true;afficher();
-  };
+  b.onclick=function(){onglet=b.dataset.t;document.querySelectorAll('[data-t]').forEach(function(x){x.className='petit gris'});b.className='petit';$('edition').hidden=true;afficher()};
 });
 $('recherche').addEventListener('input',afficher);
 quandPret(function(){
   dir=estDirecteur();
-  if(!dir){
-    document.querySelectorAll('[data-t="pai"],[data-t="dep"]').forEach(function(b){b.style.display='none'});
-    $('titre').textContent='Compléter les fiches des élèves';
-  }
+  if(!dir){document.querySelectorAll('[data-t="pai"],[data-t="dep"]').forEach(function(b){b.style.display='none'});$('titre').textContent='Compléter les fiches des élèves'}
   $('zone').hidden=false;afficher();setTimeout(afficher,2500);
 });
 </script></body></html>
