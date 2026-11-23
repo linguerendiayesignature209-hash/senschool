@@ -327,3 +327,69 @@ function initCorrections(){
   ancre.parentNode.insertBefore(a,ancre);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initCorrections);else initCorrections();
+/* ===== ÉTAPE B : TARIFS 2026-2027 PAR CLASSE + CAS SOCIAL ===== */
+var ANNEE_ACTIVE='2026-2027';
+var MOIS_SCOLAIRE=['Octobre','Novembre','Décembre','Janvier','Février','Mars','Avril','Mai','Juin'];
+function classeCleB(e){
+  if(!e) return '';
+  if(e.cursus==='Arabe uniquement') return e.niveauArabe||'';
+  return e.classeFrancaise||'';
+}
+function trouverTarifB(e){
+  try{
+    var tous=brut('frais')||[];
+    var annee=e.anneeScolaire||ANNEE_ACTIVE;
+    var cle=classeCleB(e);
+    var i,t;
+    for(i=0;i<tous.length;i++){t=tous[i];
+      var tc=t.classe||t.classeFrancaise||t.niveauArabe||t.niveau||'';
+      var ta=t.anneeScolaire||t.annee||ANNEE_ACTIVE;
+      if(ta===annee && t.cursus===e.cursus && t.regime===e.regime && tc===cle) return t;
+    }
+    for(i=0;i<tous.length;i++){t=tous[i];
+      var ta2=t.anneeScolaire||t.annee||ANNEE_ACTIVE;
+      var tc2=t.classe||t.classeFrancaise||t.niveauArabe||t.niveau||'';
+      if(!tc2 && ta2===annee && t.cursus===e.cursus && t.regime===e.regime) return t;
+    }
+  }catch(err){}
+  return null;
+}
+function inscriptionDueB(e){
+  var t=trouverTarifB(e);
+  var base=t?(Number(t.inscription)||0):0;
+  if(e.statutAide==='Gratuité totale') return 0;
+  var red=Number(e.reducInscription)||0;
+  var r=base-red; return r>0?r:0;
+}
+function mensualiteDueB(e){
+  var t=trouverTarifB(e);
+  var base=t?(Number(t.mensualite)||0):0;
+  if(e.statutAide==='Gratuité totale') return 0;
+  var red=Number(e.reducMensualite)||0;
+  var r=base-red; return r>0?r:0;
+}
+function totauxEleveB(e){
+  var inscDue=inscriptionDueB(e);
+  var mens=mensualiteDueB(e);
+  var payI=0, payM=0;
+  try{
+    var tous=brut('pai')||[];
+    tous.forEach(function(p){
+      if(p.archive) return;
+      var ok=false;
+      if(e.matricule && p.matricule) ok=(p.matricule===e.matricule);
+      else if(p.nomEleve && e.nom) ok=(p.nomEleve===e.nom);
+      if(!ok) return;
+      if(p.typePaiement==='Inscription') payI+=Number(p.montant)||0;
+      else if(p.typePaiement==='Mensualité') payM+=Number(p.montant)||0;
+    });
+  }catch(err){}
+  var resteI=inscDue-payI; if(resteI<0) resteI=0;
+  var totalM=mens*MOIS_SCOLAIRE.length;
+  var resteM=totalM-payM; if(resteM<0) resteM=0;
+  var nb=0;
+  if(mens<=0){ nb=MOIS_SCOLAIRE.length; }
+  else{ nb=Math.floor(payM/mens); if(nb>MOIS_SCOLAIRE.length) nb=MOIS_SCOLAIRE.length; }
+  return {inscriptionDue:inscDue, payeInscription:payI, resteInscription:resteI, mensualite:mens, totalMensualite:totalM, payeMensualite:payM, resteMensualite:resteM, resteTotal:resteI+resteM, moisPayes:nb, moisRestants:MOIS_SCOLAIRE.slice(nb)};
+}
+if(typeof AR!=='undefined'){AR['Tarifs']='الرسوم';AR['Cas social']='الحالة الاجتماعية';}
