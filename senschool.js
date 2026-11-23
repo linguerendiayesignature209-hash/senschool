@@ -393,3 +393,28 @@ function totauxEleveB(e){
   return {inscriptionDue:inscDue, payeInscription:payI, resteInscription:resteI, mensualite:mens, totalMensualite:totalM, payeMensualite:payM, resteMensualite:resteM, resteTotal:resteI+resteM, moisPayes:nb, moisRestants:MOIS_SCOLAIRE.slice(nb)};
 }
 if(typeof AR!=='undefined'){AR['Tarifs']='الرسوم';AR['Cas social']='الحالة الاجتماعية';}
+/* ===== ÉTAPE B : tarifs par classe, cas sociaux ===== */
+const CLASSES_TARIF=['Préscolaire','CI','CP','CE1','CE2','CM1','CM2','Arabe uniquement'];
+function classeDe(e){return e.classeFrancaise||'Arabe uniquement'}
+function tarifPour(e){
+  const s=e.statutSocial||'Normal';
+  if(s==='Gratuit')return {inscription:0,mensualite:0,statut:s,reduction:0};
+  const f=lire('frais').find(function(x){return x.anneeScolaire===e.anneeScolaire&&x.classe===classeDe(e)});
+  if(!f)return null;
+  const red=s==='Réduction'?(Number(e.reduction)||0):0;
+  return {inscription:f.inscription||0,mensualite:Math.max((f.mensualite||0)-red,0),statut:s,reduction:red};
+}
+Object.assign(AR,{
+'Classe':'القسم','Toutes les classes françaises':'كل الأقسام الفرنسية','Nombre de mois':'عدد الأشهر',
+'Payer le reste à ce jour':'دفع المتبقي إلى حد اليوم',"Payer le reste de l'année":'دفع المتبقي للسنة كاملة',
+"Payer le reste de l'inscription":'دفع المتبقي من التسجيل','Anciens tarifs (inutilisés)':'تعريفات قديمة (غير مستعملة)',
+'Cas social':'حالة اجتماعية','Normal':'عادي','Gratuit':'مجاني','Réduction':'تخفيض'
+});
+Object.assign(MSG,{"Rien à payer : c'est déjà réglé.":'لا شيء للدفع: تم التسديد.'});
+function ajouterChampsSociaux(){
+  if(typeof CH!=='undefined'&&CH.insc&&!CH.insc.some(function(d){return d[0]==='statutSocial'})){
+    CH.insc.push(['statutSocial','Cas social','select',['Normal','Gratuit','Réduction']]);
+    CH.insc.push(['reduction','Réduction par mois (FCFA, si Réduction)','tel']);
+  }
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ajouterChampsSociaux);else ajouterChampsSociaux();
