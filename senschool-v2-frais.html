@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Frais scolaires</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
+<h1>Frais scolaires</h1><p>École Al Islah - Yeumbeul Nord</p>
+<p id="info"></p>
+<form id="f" hidden>
+<label>Année scolaire</label><select id="annee" required><option value="">Choisir une année</option></select>
+<label>Classe</label><select id="classe" required><option value="">Choisir une classe</option></select>
+<label>Frais d'inscription (une fois par an, FCFA)</label><input id="inscription" type="number" min="0" required>
+<label>Mensualité (par mois, FCFA)</label><input id="mensualite" type="number" min="0" required>
+<label>Uniforme (FCFA)</label><input id="uniforme" type="number" min="0" required>
+<button type="submit">Enregistrer les frais</button>
+</form>
+<div id="liste"></div>
+<script src="senschool.js"></script><script src="senschool-outils.js"></script><script src="senschool-finance.js"></script>
+<script>
+const TOUTES='Toutes les classes françaises';
+const CLASSES=['Préscolaire','CI','CP','CE1','CE2','CM1','CM2','Arabe uniquement'];
+let dir=false;
+remplir($('annee'),FIN.CAL.annees);
+remplir($('classe'),[TOUTES].concat(CLASSES));
+function carte(z,f,archive){
+  const d=document.createElement('div');d.className='card';
+  const t=document.createElement('b');t.textContent=f.anneeScolaire+' — '+f.classe;
+  if(archive){t.style.textDecoration='line-through';t.style.color='#777'}
+  d.appendChild(t);
+  const m=document.createElement('div');m.style.margin='8px 0';
+  m.textContent='Inscription : '+fcfa(f.inscription||0)+' — Mensualité : '+fcfa(f.mensualite||0)+' — Uniforme : '+(f.uniforme===undefined?'⚠️ non défini':fcfa(f.uniforme));
+  d.appendChild(m);
+  const h=f.hist&&f.hist[f.hist.length-1];
+  if(h){const i=document.createElement('div');i.style.cssText='font-size:.8em;color:#666;margin-bottom:6px';i.textContent='✏️ modifié par '+h.par+' le '+dateFr(h.le.slice(0,10));d.appendChild(i)}
+  if(dir){
+    const bouton=function(txt,cls,fn){const b=document.createElement('button');b.textContent=txt;b.className='petit '+cls;b.style.marginRight='6px';b.onclick=fn;d.appendChild(b)};
+    if(!archive)bouton('Modifier','gris',function(){
+      $('annee').value=f.anneeScolaire;$('classe').value=f.classe;
+      $('inscription').value=f.inscription||0;$('mensualite').value=f.mensualite||0;
+      $('uniforme').value=f.uniforme===undefined?'':f.uniforme;window.scrollTo(0,0);
+    });
+    bouton(archive?'Rétablir':'Archiver',archive?'':'rouge',function(){basculer(f.id)});
+  }
+  z.appendChild(d);
+}
+function afficher(){
+  const z=$('liste');z.innerHTML='';
+  const tous=brut('frais').filter(function(f){return f.classe}).sort(function(a,b){
+    return a.anneeScolaire.localeCompare(b.anneeScolaire)||CLASSES.indexOf(a.classe)-CLASSES.indexOf(b.classe)});
+  tous.filter(function(f){return !f.archive}).forEach(function(f){carte(z,f,false)});
+  const arch=tous.filter(function(f){return f.archive});
+  if(arch.length){const h=document.createElement('h2');h.textContent='Tarifs archivés';z.appendChild(h);arch.forEach(function(f){carte(z,f,true)})}
+  const vieux=brut('frais').filter(function(f){return !f.classe});
+  if(vieux.length){
+    const h=document.createElement('h2');h.textContent='Anciens tarifs (historique)';z.appendChild(h);
+    vieux.forEach(function(f){
+      const d=document.createElement('div');d.className='card';
+      d.textContent=f.anneeScolaire+' — '+f.cursus+' — '+f.regime+' : inscription '+fcfa(f.inscription||0)+', mensualité '+fcfa(f.mensualite||0);
+      z.appendChild(d);
+    });
+  }
+}
+function basculer(id){
+  if(!dir){alert('Réservé au directeur.');return}
+  const l=brut('frais'),f=l.find(function(x){return x.id===id});if(!f)return;
+  if(!f.archive&&!confirm("Archiver ce tarif ? Les élèves de cette classe n'auront plus de tarif."))return;
+  if(f.archive){delete f.archive;delete f.archiveLe;delete f.archivePar}
+  else{f.archive=true;f.archiveLe=new Date().toISOString();f.archivePar=cloud.user.email}
+  ecrire('frais',l);afficher();
+}
+$('f').addEventListener('submit',function(e){
+  e.preventDefault();
+  if(!dir){alert('Réservé au directeur.');return}
+  const a=$('annee').value,ins=Number($('inscription').value),men=Number($('mensualite').value),uni=Number($('uniforme').value);
+  if(!(ins>=0&&men>=0&&uni>=0)){alert('Montants invalides.');return}
+  const cl=$('classe').value===TOUTES?CLASSES.slice(0,7):[$('classe').value];
+  const l=brut('frais'),quand=new Date().toISOString();
+  const trouver=function(c){return l.find(function(r){return r.classe===c&&r.anneeScolaire===a&&!r.archive})||l.find(function(r){return r.classe===c&&r.anneeScolaire===a})};
+  const existe=cl.filter(function(c){const x=trouver(c);return x&&!x.archive});
+  if(existe.length&&!confirm('Un tarif existe déjà pour : '+existe.join(', ')+'. Le remplacer ?'))return;
+  cl.forEach(function(c){
+    const x=trouver(c);
+    if(x){
+      const av={inscription:x.inscription,mensualite:x.mensualite,uniforme:x.uniforme};
+      if(x.archive){delete x.archive;delete x.archiveLe;delete x.archivePar}
+      x.inscription=ins;x.mensualite=men;x.uniforme=uni;x.schema=2;
+      x.hist=(x.hist||[]).concat([{le:quand,par:cloud.user.email,avant:av}]);
+    }else l.push({anneeScolaire:a,classe:c,inscription:ins,mensualite:men,uniforme:uni,schema:2});
+  });
+  ecrire('frais',l);$('f').reset();afficher();alert('✅ Tarif enregistré.');
+});
+quandPret(function(){
+  dir=estDirecteur();
+  $('f').hidden=!dir;
+  $('info').textContent=dir?'':'Seul le directeur peut modifier les tarifs.';
+  afficher();setTimeout(afficher,2500);
+});
+</script></body></html>
