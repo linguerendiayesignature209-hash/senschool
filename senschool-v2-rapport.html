@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Rapport financier</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour noprint" href="senschool-sauvegarde.html">⬅️ Retour</a>
+<div class="noprint"><label>Année scolaire</label><select id="annee"></select>
+<button id="imp">🖨️ Imprimer / Enregistrer en PDF</button>
+<p>Dans la fenêtre d'impression, choisis « Enregistrer au format PDF ».</p></div>
+<h2 style="text-align:center;color:#14532d">École Al Islah - Yeumbeul Nord</h2>
+<h3 id="titre" style="text-align:center"></h3>
+<div id="resume" class="card"></div>
+<table><thead><tr><th>Matricule</th><th>Élève</th><th>Dû</th><th>Payé</th><th>Reste</th><th>Uniforme (reste)</th></tr></thead><tbody id="corps"></tbody></table>
+<script src="senschool.js"></script><script src="senschool-outils.js"></script><script src="senschool-finance.js"></script>
+<script>
+Object.assign(AR,{'Encaissé : uniformes':'المحصّل : الزي المدرسي','Uniformes restant à payer':'الزي المدرسي المتبقي','Uniforme (reste)':'الزي المدرسي (المتبقي)'});
+remplir($('annee'),FIN.CAL.annees);
+(function(){const auj=new Date().toISOString().slice(0,10),c=FIN.CAL.annees.find(function(a){return FIN.dansAnnee(a,auj)});if(c)$('annee').value=c})();
+function rapport(){
+  const annee=$('annee').value,R=FIN.resumeAnnee(annee),corps=$('corps');
+  corps.innerHTML='';
+  R.lignes.forEach(function(x){
+    const e=x.eleve,s=x.situation;
+    if(!s){ligne(corps,[e.matricule||'-',e.nom,'?','?','?','?']);return}
+    ligne(corps,[e.matricule||'-',e.nom,fcfa(s.duAnnee),fcfa(s.paye),fcfa(s.resteAnnee),s.uniforme.du?(s.uniforme.reste>0?fcfa(s.uniforme.reste):'✅'):'—']);
+  });
+  $('titre').textContent='Rapport financier '+annee+' — édité le '+dateFr(new Date().toISOString().slice(0,10));
+  const r=$('resume');r.innerHTML='';
+  [['Élèves inscrits',R.nbEleves],['Frais attendus (année complète)',fcfa(R.attendu)],['Encaissé : inscriptions',fcfa(R.inscriptions)],['Encaissé : mensualités',fcfa(R.mensualites)],['Encaissé : uniformes',fcfa(R.uniformes)],['Encaissé : autres frais',fcfa(R.autres)],['Total encaissé',fcfa(R.encaisse)],['Reste à encaisser (frais scolaires)',fcfa(R.reste)],['Uniformes restant à payer',fcfa(R.uniformeReste)],["Dépenses de l'année",fcfa(R.depenses)],['Solde de caisse (encaissé − dépenses)',fcfa(R.solde)]].forEach(function(x){
+    const d=document.createElement('div');d.style.cssText='display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #eee';
+    const s1=document.createElement('span'),s2=document.createElement('b');s1.textContent=x[0];s2.textContent=x[1];d.appendChild(s1);d.appendChild(s2);r.appendChild(d);
+  });
+  if(R.sansTarif.length){const d=document.createElement('div');d.style.color='#b91c1c';d.textContent='⚠️ '+R.sansTarif.length+" élève(s) sans tarif défini : leur dû n'est pas compté.";r.appendChild(d)}
+}
+$('annee').addEventListener('change',rapport);$('imp').onclick=function(){window.print()};
+quandPret(function(){rapport();setTimeout(rapport,2500)});
+</script></body></html>
