@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SenSchool - Reçus</title><link rel="stylesheet" href="senschool.css"></head>
+<body>
+<a class="retour noprint" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
+<div class="noprint"><h1>Reçus de paiement</h1>
+<label>Choisir un paiement</label><select id="choix"><option value="">Choisir un paiement</option></select>
+<label>Signé par</label><select id="signataire"><option value="directeur">Directeur</option><option value="comptable">Comptable</option></select></div>
+<div id="recu" class="card" hidden>
+<p id="apercu" class="noprint" style="text-align:center"></p>
+<img id="image" style="width:100%;border:1px solid #ccc">
+<button class="noprint" id="btnPartager">📤 Envoyer l'image (WhatsApp)</button>
+<button class="noprint gris" id="btnTelecharger">⬇️ Télécharger l'image</button>
+<button class="noprint" onclick="window.print()">🖨️ Imprimer</button>
+<a id="wa" class="btn or noprint" target="_blank">Envoyer le texte par WhatsApp</a>
+</div>
+<a class="retour noprint" href="senschool-reglages.html">⚙️ Configurer cachet et signatures</a>
+<script src="senschool.js"></script><script src="senschool-outils.js"></script><script src="senschool-finance.js"></script>
+<script>
+let blob=null,numero='',paiement=null;
+(function(){const o=versArabe;versArabe=function(m){return o(m).replace('النوع : Uniforme','النوع : الزي المدرسي')}})();
+const MAB=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+function libMois(cle){const t=cle.split('-');return MAB[Number(t[1])-1]+' '+t[0]}
+function textMois(p){
+  const c=p.moisCouverts;
+  if(!c||!c.length)return null;
+  return c.length===1?libMois(c[0]):libMois(c[0])+' → '+libMois(c[c.length-1]);
+}
+function telDe(p){
+  const e=brut('insc').find(function(x){
+    if(x.anneeScolaire!==p.anneeScolaire)return false;
+    if(p.eleveId)return x.id===p.eleveId;
+    if(p.matricule)return x.matricule===p.matricule;
+    return x.nom===p.nomEleve;
+  });
+  return e?e.telParent||'':'';
+}
+function liste(){return FIN.valides().slice().sort(function(a,b){return String(b.cree||'').localeCompare(String(a.cree||''))})}
+function remplirListe(){
+  const cur=$('choix').value;
+  $('choix').length=1;
+  liste().forEach(function(p){
+    const o=document.createElement('option');o.value=p.id;
+    o.textContent=(p.numeroRecu||'-')+' — '+p.nomEleve+' — '+p.typePaiement+' — '+fcfa(p.montant);
+    $('choix').appendChild(o);
+  });
+  if(cur)$('choix').value=cur;
+}
+function pret(){return new Promise(function(r){quandPret(r)})}
+async function genererRecuV2(p,numero,signataire,rg){
+  const T={'Inscription':'التسجيل','Mensualité':'القسط الشهري','Uniforme':'الزي المدرسي','Autres frais':'رسوم أخرى'};
+  const l=[['N° du reçu','رقم الوصل',numero,''],['Élève','التلميذ',p.nomEleve,''],['Année scolaire','السنة الدراسية',p.anneeScolaire,''],['Type','النوع',p.typePaiement,T[p.typePaiement]||'']];
+  const tm=textMois(p);
+  if(tm)l.push(['Mois couverts','الأشهر المغطاة',tm,p.moisCouverts.length+' mois']);
+  l.push(['Montant','المبلغ',fcfa(p.montant),''],['Date','التاريخ',dateFr(p.datePaiement),'']);
+  const W=800,sigY=300+l.length*68+12,H=sigY+280;
+  const c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d');
+  x.fillStyle='#fff';x.fillRect(0,0,W,H);
+  x.strokeStyle='#14532d';x.lineWidth=8;x.strokeRect(20,20,W-40,H-40);
+  x.textAlign='center';x.fillStyle='#14532d';
+  x.font='bold 36px Arial';x.fillText('École Al Islah - Yeumbeul Nord',W/2,90);
+  x.font='28px Arial';x.fillText('مدرسة الإصلاح الفرنسية العربية',W/2,135);
+  x.fillStyle='#222';x.font='bold 30px Arial';x.fillText('REÇU DE PAIEMENT',W/2,190);
+  x.font='28px Arial';x.fillText('وصل دفع',W/2,230);
+  x.textAlign='left';
+  l.forEach(function(r,i){
+    const y=300+i*68;
+    x.fillStyle='#666';x.font='24px Arial';x.fillText(r[0],70,y);
+    x.font='20px Arial';x.fillText(r[1],70,y+26);
+    x.fillStyle='#000';x.font='bold 27px Arial';x.fillText(String(r[2]),330,y);
+    if(r[3]){x.fillStyle='#444';x.font='22px Arial';x.fillText(r[3],330,y+26)}
+  });
+  const cachet=await chargerImage(rg.cachet),sig=await chargerImage(signataire==='comptable'?rg.sigComptable:rg.sigDirecteur);
+  function poser(img,bx,by,bw,bh){if(!img)return;const s=Math.min(bw/img.width,bh/img.height);x.drawImage(img,bx+(bw-img.width*s)/2,by+(bh-img.height*s)/2,img.width*s,img.height*s)}
+  poser(cachet,70,sigY,280,170);poser(sig,450,sigY,280,170);
+  const sg=signataire==='comptable';
+  x.fillStyle='#666';x.font='22px Arial';x.textAlign='center';
+  x.fillText("Cachet de l'école",210,sigY+205);x.fillText('ختم المدرسة',210,sigY+235);
+  x.fillText('Signature : '+(sg?'Comptable':'Directeur'),590,sigY+205);x.fillText('التوقيع : '+(sg?'المحاسب':'المدير'),590,sigY+235);
+  return new Promise(function(ok){c.toBlob(ok,'image/png')});
+}
+async function fabriquer(){
+  if(!paiement)return;
+  $('apercu').textContent="Préparation de l'image…";
+  await pret();
+  const rg=await lireReglages();
+  $('apercu').textContent=rg.cachet?'':'⚠️ Cachet non configuré (lien en bas de page).';
+  blob=await genererRecuV2(paiement,numero,$('signataire').value,rg);
+  $('image').src=URL.createObjectURL(blob);
+}
+$('choix').addEventListener('change',function(){
+  if($('choix').value===''){$('recu').hidden=true;paiement=null;return}
+  paiement=liste().find(function(p){return p.id===$('choix').value});
+  if(!paiement)return;
+  numero=paiement.numeroRecu||'REC-?';
+  const tm=textMois(paiement);
+  const msg='*École Al Islah - Reçu '+numero+'*\nÉlève : '+paiement.nomEleve+'\nType : '+paiement.typePaiement+'\nMontant : '+fcfa(paiement.montant)+'\nDate : '+dateFr(paiement.datePaiement)+(tm?'\nMois couverts : '+tm:'')+'\nMerci pour votre confiance.';
+  $('wa').href=lienWhatsApp(telDe(paiement),msg);
+  $('recu').hidden=false;fabriquer();
+});
+$('signataire').addEventListener('change',fabriquer);
+$('btnPartager').onclick=async function(){
+  if(!blob)return;
+  const f=new File([blob],numero+'.png',{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share({files:[f],text:'Reçu '+numero+' - École Al Islah'})}catch(e){}
+  }else{alert("Partage indisponible ici. Utilise « Télécharger l'image », puis envoie-la par WhatsApp.")}
+};
+$('btnTelecharger').onclick=function(){if(!blob)return;const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=numero+'.png';a.click()};
+remplirListe();
+quandPret(function(){remplirListe();setTimeout(remplirListe,2500)});
+</script></body></html>
