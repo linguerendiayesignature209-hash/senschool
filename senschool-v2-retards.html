@@ -4,11 +4,9 @@
 <body>
 <a class="retour" href="senschool-dashboard.html">⬅️ Retour au tableau de bord</a>
 <h1>Retards de paiement</h1>
-<p>Mensualités à payer au plus tard le 5 de chaque mois, d'octobre à septembre.</p>
+<p>Mensualités à payer au plus tard le 5 de chaque mois, d'octobre à septembre. L'uniforme est suivi à part.</p>
 <label>Année scolaire</label><select id="annee"></select>
-<div class="card">Total des retards<div id="total" class="nombre">0 FCFA</div></div>
-<div class="card">Uniformes restant à payer<div id="unif" class="nombre">0 FCFA</div></div>
-<input id="recherche" placeholder="Nom ou matricule">
+<div class="card">Total des retards (frais scolaires)<div id="total" class="nombre">0 FCFA</div></div>
 <div class="defile"><table><thead><tr><th>Élève</th><th>Reste à payer</th><th></th></tr></thead><tbody id="corps"></tbody></table></div>
 <h2>Détail mois par mois</h2>
 <label>Choisir un élève</label><select id="eleve"></select>
@@ -17,56 +15,41 @@
 <script>
 remplir($('annee'),FIN.CAL.annees);
 (function(){const auj=new Date().toISOString().slice(0,10),c=FIN.CAL.annees.find(function(a){return FIN.dansAnnee(a,auj)});if(c)$('annee').value=c})();
-const STAT={paye:'✅ Payé',retard:'🔴 En retard',avenir:'⏳ À venir',exonere:'✅ Exonéré'};
+const ST={paye:'✅ Payé',partiel:'🟠 Partiel',retard:'🔴 En retard',avenir:'⏳ À venir',exonere:'✅ Exonéré'};
 function eleves(){return lire('insc').filter(function(e){return e.anneeScolaire===$('annee').value})}
 function afficher(){
-  const q=$('recherche').value.trim().toLowerCase(),corps=$('corps');
-  corps.innerHTML='';let total=0,unif=0;
-  const liste=eleves(),sel=$('eleve'),cur=sel.value;
-  sel.innerHTML='';
-  liste.forEach(function(e){const o=document.createElement('option');o.value=e.id;o.textContent=(e.matricule?e.matricule+' — ':'')+e.nom;sel.appendChild(o)});
-  if(cur)sel.value=cur;
-  const lignes=[];
-  liste.forEach(function(e){
+  const corps=$('corps');corps.innerHTML='';let total=0;
+  const l=eleves(),cur=$('eleve').value;
+  $('eleve').length=0;
+  l.forEach(function(e){const o=document.createElement('option');o.value=e.id;o.textContent=(e.matricule?e.matricule+' — ':'')+e.nom;$('eleve').appendChild(o)});
+  if(cur&&l.some(function(e){return e.id===cur}))$('eleve').value=cur;
+  l.forEach(function(e){
     const s=FIN.situation(e);
-    if(!s){lignes.push({e:e,s:null,reste:1e12});return}
-    unif+=s.uniforme.reste;
-    if(s.resteJour>0){total+=s.resteJour;lignes.push({e:e,s:s,reste:s.resteJour})}
-  });
-  lignes.sort(function(a,b){return b.reste-a.reste});
-  lignes.forEach(function(x){
-    const nom=(x.e.matricule?x.e.matricule+' — ':'')+x.e.nom;
-    if(q&&nom.toLowerCase().indexOf(q)<0)return;
-    if(!x.s){ligne(corps,[nom,'Tarif non défini','']);return}
-    const tr=ligne(corps,[nom,fcfa(x.s.resteJour)]),td=document.createElement('td');
-    if(x.e.telParent){
-      const a=document.createElement('a');
-      const msg='Assalamou alaykoum,\n*École Al Islah* : rappel de paiement pour '+x.e.nom+'.\nMontant dû à ce jour : '+fcfa(x.s.duJour)+'\nDéjà payé : '+fcfa(x.s.paye)+'\n*Reste à payer : '+fcfa(x.s.resteJour)+'*\nLes mensualités sont à régler au plus tard le 5 de chaque mois. Merci pour votre compréhension.';
-      a.textContent='Relancer';a.className='btn petit';a.target='_blank';a.href=lienWhatsApp(x.e.telParent,msg);td.appendChild(a);
-    }else td.textContent='Pas de numéro';
-    tr.appendChild(td);
+    if(!s){ligne(corps,[e.nom,'Tarif non défini','']);return}
+    if(s.resteJour<=0)return;
+    total+=s.resteJour;
+    const nom=e.nom+(s.uniforme.reste>0?' (uniforme : '+fcfa(s.uniforme.reste)+')':'');
+    const tr=ligne(corps,[nom,fcfa(s.resteJour)]),td=document.createElement('td'),a=document.createElement('a');
+    const msg='Assalamou alaykoum,\n*École Al Islah* : rappel de paiement pour '+e.nom+'.\nMontant dû à ce jour : '+fcfa(s.duJour)+'\nDéjà payé : '+fcfa(s.paye)+'\n*Reste à payer : '+fcfa(s.resteJour)+'*\nLes mensualités sont à régler au plus tard le 5 de chaque mois. Merci pour votre compréhension.';
+    a.textContent='Relancer';a.className='btn petit';a.target='_blank';a.href=lienWhatsApp(e.telParent,msg);
+    td.appendChild(a);tr.appendChild(td);
   });
   $('total').textContent=fcfa(total);
-  $('unif').textContent=fcfa(unif);
   detail();
 }
 function detail(){
   const corps=$('mois');corps.innerHTML='';
-  const e=eleves().find(function(x){return x.id===$('eleve').value});
-  if(!e)return;
+  const e=eleves().find(function(x){return x.id===$('eleve').value});if(!e)return;
   const s=FIN.situation(e);
   if(!s){ligne(corps,['Tarif non défini','','']);return}
-  const i=s.inscription;
-  ligne(corps,['Inscription',fcfa(i.du),i.du===0?'✅ Exonéré':i.paye>=i.du?'✅ Payé':i.paye>0?'🟠 Partiel ('+fcfa(i.paye)+')':'🔴 Non payé']);
-  s.detail.forEach(function(m){
-    const st=m.statut==='partiel'?'🟠 Partiel ('+fcfa(m.paye)+')':STAT[m.statut];
-    ligne(corps,[m.libelle,fcfa(m.montant),st]);
-  });
-  const u=s.uniforme;
-  if(u.du)ligne(corps,['Uniforme',fcfa(u.du),u.paye>=u.du?'✅ Payé':u.paye>0?'🟠 Partiel ('+fcfa(u.paye)+')':'⏳ Non payé']);
+  const a=s.tarif.aide,i=s.inscription,u=s.uniforme;
+  if(a.type!=='Normal')ligne(corps,['Cas social','',a.type]);
+  ligne(corps,['Inscription',fcfa(i.du),i.du===0?'✅ Exonéré':i.reste===0?'✅ Payé':i.paye>0?'🟠 Partiel':'🔴 Non payé']);
+  ligne(corps,['Uniforme',fcfa(u.du),u.du===0?'—':u.reste===0?'✅ Payé':u.paye>0?'🟠 Partiel':'🔴 Non payé']);
+  s.detail.forEach(function(d){ligne(corps,[d.libelle,fcfa(d.montant),d.statut==='partiel'?ST.partiel+' ('+fcfa(d.paye)+')':ST[d.statut]])});
 }
 $('annee').addEventListener('change',afficher);
 $('eleve').addEventListener('change',detail);
-$('recherche').addEventListener('input',afficher);
+afficher();
 quandPret(function(){afficher();setTimeout(afficher,2500)});
 </script></body></html>
